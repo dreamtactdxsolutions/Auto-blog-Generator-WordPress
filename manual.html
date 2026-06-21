@@ -1,0 +1,647 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🌴 宮古島レンタカー ブログ記事自動生成ツール 取扱説明書</title>
+    <style>
+        :root {
+            --primary-color: #007791;
+            --primary-light: #35a7c9;
+            --primary-dark: #004d61;
+            --accent-color: #F0D500;
+            --bg-color: #f4f7f6;
+            --card-bg: #ffffff;
+            --text-color: #2c3e50;
+            --text-muted: #7f8c8d;
+            --border-color: #e2e8f0;
+            --success-color: #2ecc71;
+            --warning-color: #f1c40f;
+            --danger-color: #e74c3c;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Helvetica Neue', Arial, 'Hiragino Kaku Gothic ProN', Meiryo, sans-serif;
+            line-height: 1.8;
+            color: var(--text-color);
+            background-color: var(--bg-color);
+        }
+
+        /* ヘッダー */
+        .hero {
+            background: linear-gradient(rgba(0, 0, 0, 0.4), rgba(0, 0, 0, 0.4)), url('images/manual_header.png') no-repeat center center/cover;
+            color: white;
+            padding: 100px 20px;
+            text-align: center;
+            border-bottom: 5px solid var(--accent-color);
+        }
+
+        .hero h1 {
+            font-size: 2.8rem;
+            font-weight: 700;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 8px rgba(0,0,0,0.6);
+        }
+
+        .hero p {
+            font-size: 1.2rem;
+            opacity: 0.95;
+            text-shadow: 1px 1px 4px rgba(0,0,0,0.6);
+        }
+
+        /* メインレイアウト */
+        .container {
+            max-width: 1200px;
+            margin: 40px auto;
+            padding: 0 20px;
+            display: flex;
+            gap: 30px;
+        }
+
+        /* サイドバー目次 */
+        .sidebar {
+            width: 280px;
+            position: sticky;
+            top: 20px;
+            align-self: flex-start;
+            background-color: var(--card-bg);
+            border-radius: 12px;
+            padding: 24px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+
+        .sidebar h2 {
+            font-size: 1.1rem;
+            color: var(--primary-dark);
+            margin-bottom: 15px;
+            border-bottom: 2px solid var(--border-color);
+            padding-bottom: 8px;
+        }
+
+        .sidebar ul {
+            list-style: none;
+        }
+
+        .sidebar li {
+            margin-bottom: 10px;
+        }
+
+        .sidebar a {
+            color: var(--text-color);
+            text-decoration: none;
+            font-size: 0.95rem;
+            display: block;
+            padding: 6px 10px;
+            border-radius: 6px;
+            transition: all 0.2s ease;
+        }
+
+        .sidebar a:hover {
+            background-color: #eef8fa;
+            color: var(--primary-color);
+            padding-left: 15px;
+        }
+
+        /* メインコンテンツ */
+        .content {
+            flex: 1;
+            min-width: 0; /* flexの子要素でのはみ出し防止 */
+        }
+
+        section {
+            background-color: var(--card-bg);
+            border-radius: 12px;
+            padding: 40px;
+            margin-bottom: 30px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+        }
+
+        h2.section-title {
+            font-size: 1.8rem;
+            color: var(--primary-color);
+            border-left: 6px solid var(--primary-light);
+            padding-left: 15px;
+            margin-bottom: 25px;
+        }
+
+        h3 {
+            font-size: 1.3rem;
+            color: var(--primary-dark);
+            margin-top: 30px;
+            margin-bottom: 15px;
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 8px;
+        }
+
+        p {
+            margin-bottom: 15px;
+        }
+
+        /* 画像スタイル */
+        .doc-image {
+            width: 100%;
+            max-width: 800px;
+            height: auto;
+            display: block;
+            margin: 25px auto;
+            border-radius: 10px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+
+        /* リストとステップ */
+        ol, ul {
+            margin-bottom: 20px;
+            padding-left: 20px;
+        }
+
+        li {
+            margin-bottom: 8px;
+        }
+
+        /* 手順ステップカード */
+        .step-list {
+            list-style: none;
+            padding-left: 0;
+        }
+
+        .step-item {
+            position: relative;
+            padding-left: 50px;
+            margin-bottom: 25px;
+        }
+
+        .step-num {
+            position: absolute;
+            left: 0;
+            top: 2px;
+            width: 36px;
+            height: 36px;
+            background-color: var(--primary-light);
+            color: white;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 1.1rem;
+        }
+
+        /* 警告・メモなどのコールアウト */
+        .callout {
+            padding: 20px;
+            border-radius: 8px;
+            margin: 20px 0;
+            border-left: 5px solid;
+        }
+
+        .callout-info {
+            background-color: #ebf8fa;
+            border-color: var(--primary-light);
+            color: var(--primary-dark);
+        }
+
+        .callout-warning {
+            background-color: #fdfaf0;
+            border-color: var(--warning-color);
+            color: #7d6608;
+        }
+
+        .callout-danger {
+            background-color: #fdf3f2;
+            border-color: var(--danger-color);
+            color: #7b241c;
+        }
+
+        .callout h4 {
+            margin-bottom: 8px;
+            font-weight: 700;
+        }
+
+        /* コード・設定貼り付けブロック */
+        pre {
+            background-color: #2d3748;
+            color: #f7fafc;
+            padding: 20px;
+            border-radius: 8px;
+            font-family: 'Courier New', Courier, monospace;
+            overflow-x: auto;
+            margin: 20px 0;
+            font-size: 0.9rem;
+        }
+
+        code {
+            font-family: 'Courier New', Courier, monospace;
+            background-color: #edf2f7;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 0.9em;
+            color: #e53e3e;
+        }
+
+        pre code {
+            background-color: transparent;
+            padding: 0;
+            color: inherit;
+            font-size: inherit;
+        }
+
+        /* テーブル */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+        }
+
+        th, td {
+            border: 1px solid var(--border-color);
+            padding: 12px;
+            text-align: left;
+        }
+
+        th {
+            background-color: #f8fafc;
+            color: var(--primary-dark);
+            font-weight: bold;
+        }
+
+        tr:nth-child(even) {
+            background-color: #f8fafc;
+        }
+
+        /* ボタン・リンク */
+        .btn {
+            display: inline-block;
+            padding: 8px 18px;
+            background-color: var(--primary-color);
+            color: white;
+            text-decoration: none;
+            border-radius: 6px;
+            font-weight: bold;
+            transition: background 0.2s ease;
+        }
+
+        .btn:hover {
+            background-color: var(--primary-dark);
+        }
+
+        /* レスポンシブ設計 */
+        @media screen and (max-width: 900px) {
+            .container {
+                flex-direction: column;
+            }
+            .sidebar {
+                width: 100%;
+                position: relative;
+                top: 0;
+                margin-bottom: 20px;
+                max-height: none;
+            }
+            .hero h1 {
+                font-size: 2rem;
+            }
+            section {
+                padding: 24px;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <header class="hero">
+        <h1>🌴 宮古島レンタカー</h1>
+        <p>ブログ記事自動生成システム 取扱説明書 ＆ 接続設定ガイド</p>
+    </header>
+
+    <div class="container">
+        <!-- 目次ナビゲーション -->
+        <nav class="sidebar">
+            <h2>目次</h2>
+            <ul>
+                <li><a href="#intro">1. システム概要</a></li>
+                <li><a href="#workflow">2. アプリの基本的な使い方</a></li>
+                <li><a href="#custom-images">3. 優先スポット写真の登録</a></li>
+                <li><a href="#wp-setup">4. WordPress連携の設定手順</a></li>
+                <li><a href="#gemini-setup">5. Gemini APIキーの取得方法</a></li>
+                <li><a href="#maps-setup">6. Google Maps APIキーの取得</a></li>
+                <li><a href="#unsplash-setup">7. Unsplash APIキーの取得</a></li>
+                <li><a href="#deploy-setup">8. Streamlit Cloudへの配置設定</a></li>
+                <li><a href="#support">9. トラブルシューティング</a></li>
+            </ul>
+        </nav>
+
+        <!-- メイン説明部分 -->
+        <main class="content">
+            
+            <!-- 1. システム概要 -->
+            <section id="intro">
+                <h2 class="section-title">1. システム概要</h2>
+                <p>本システムは、宮古島を訪れる観光客へ向けて、トレンドを押さえた質の高いドライブガイド記事を<strong>「AI（Gemini 2.5 Flash）」</strong>が自動執筆し、そのままWordPressへ下書き投稿するWebアプリケーションです。</p>
+                
+                <div class="callout callout-info">
+                    <h4>💡 本ツールの主なメリット</h4>
+                    <ul>
+                        <li><strong>最新トレンド自動調査</strong>: 最新のオープン店舗や地元のフェス情報をAIがネットから自律検索して記事化。</li>
+                        <li><strong>アイキャッチ画像自動合成</strong>: 選定された宮古島の実写写真に、記事タイトルを自動で文字入れした高画質バナーを自動生成。</li>
+                        <li><strong>Googleマップ写真の自動差し込み</strong>: 紹介スポットの見出し直後に、現地の写真を自動で挿入。</li>
+                        <li><strong>ハッシュタグの自動登録</strong>: 記事内で紹介した地名やお店の名前をハッシュタグ（WordPressタグ）として自動登録。</li>
+                    </ul>
+                </div>
+                
+                <img src="images/api_guide.png" alt="API連携イメージ" class="doc-image">
+            </section>
+
+            <!-- 2. アプリの基本的な使い方 -->
+            <section id="workflow">
+                <h2 class="section-title">2. アプリの基本的な使い方</h2>
+                <p>ブラウザでアプリを開き、<strong>「📝 記事生成」</strong>タブから記事を自動生成します。執筆モードには以下の2通りがあります。</p>
+                
+                <img src="images/step_guide.png" alt="使い方ステップ" class="doc-image">
+
+                <h3>A. 🎯 テーマ指定モード（自分でキーワードを決める場合）</h3>
+                <ol class="step-list">
+                    <li class="step-item">
+                        <span class="step-num">1</span>
+                        <strong>執筆条件の入力</strong><br>
+                        書きたい記事の「タイトル（テーマ）」と「主要キーワード」、および「関連キーワード（複数可）」を手動で入力します。
+                    </li>
+                    <li class="step-item">
+                        <span class="step-num">2</span>
+                        <strong>生成オプションの選択</strong><br>
+                        「Googleマップ写真を自動で挿入するか」「アイキャッチを自動取得するか」「投稿を公開か下書きにするか」のオプションにチェックを入れます（基本はそのままで構いません）。
+                    </li>
+                    <li class="step-item">
+                        <span class="step-num">3</span>
+                        <strong>生成の実行</strong><br>
+                        画面下部の「🚀 この内容で記事を自動生成してWordPressに保存する」をクリックします。
+                    </li>
+                </ol>
+
+                <h3>B. 🔥 トレンドリサーチモード（完全にAIにおまかせする場合）</h3>
+                <ol class="step-list">
+                    <li class="step-item">
+                        <span class="step-num">1</span>
+                        <strong>ジャンルの選択</strong><br>
+                        調べたいジャンル（グルメ・観光スポット・体験・すべて等）を選択します。
+                    </li>
+                    <li class="step-item">
+                        <span class="step-num">2</span>
+                        <strong>自動リサーチ＆執筆の実行</strong><br>
+                        実行ボタンを押すと、AIがネット検索ツールを駆使し、<strong>2026年現在の宮古島の新名所や最新イベント</strong>を自動的に調べて魅力的なテーマを決め、記事を自動生成します。
+                    </li>
+                </ol>
+
+                <div class="callout callout-warning">
+                    <h4>💡 記事完成後の確認方法</h4>
+                    <p>記事の投稿に成功すると、完了時に<strong>「👉 WordPressの投稿（編集画面）を開く」</strong>という青いリンクが表示されます。そこをクリックすると、即座にWordPressの編集プレビュー画面へ移動し、完成した内容を確認・手直しして公開することができます。</p>
+                </div>
+            </section>
+
+            <!-- 3. 優先スポット写真の登録 -->
+            <section id="custom-images">
+                <h2 class="section-title">3. 優先スポット写真の登録（自社画像・スマホ画像対応）</h2>
+                <p>AIが記事内に特定の観光地やお店（例：「宮古島レンタカー」など）を登場させた際、ネット上の写真ではなく、あらかじめ用意した指定写真（スタッフの実写写真など）を優先して記事内に自動挿入させる機能です。</p>
+                
+                <ol class="step-list">
+                    <li class="step-item">
+                        <span class="step-num">1</span>
+                        <strong>「📷 スポット画像登録」タブを開く</strong><br>
+                        画面上部の2番目のタブを開きます。
+                    </li>
+                    <li class="step-item">
+                        <span class="step-num">2</span>
+                        <strong>地名の入力と写真のアップロード</strong><br>
+                        適用させたい「正確なスポット名・お店の名前（例：<code>宮古島レンタカー</code>）」を入力し、スマートフォンやPCの写真フォルダから画像をアップロードします。
+                    </li>
+                    <li class="step-item">
+                        <span class="step-num">3</span>
+                        <strong>優先画像として保存</strong><br>
+                        保存すると、画面下部の一覧に登録されます。以後、AIがそのスポットを紹介した際に自動でこの画像が記事内に差し込まれます。
+                    </li>
+                </ol>
+            </section>
+
+            <!-- 4. WordPress連携の設定手順 -->
+            <section id="wp-setup">
+                <h2 class="section-title">4. WordPress連携の設定手順</h2>
+                <p>自動生成した記事をWordPressへ自動投稿するためには、WordPressの「アプリケーションパスワード」が必要です。一般のログインパスワードは安全のため使用できません。</p>
+                
+                <ol class="step-list">
+                    <li class="step-item">
+                        <span class="step-num">1</span>
+                        <strong>WordPressの管理画面にログイン</strong><br>
+                        ブログの管理者権限で管理画面に入ります。
+                    </li>
+                    <li class="step-item">
+                        <span class="step-num">2</span>
+                        <strong>プロフィール画面を開く</strong><br>
+                        左メニューから「<strong>ユーザー</strong>」＞「<strong>プロフィール</strong>」（自分自身のアカウント）を開きます。
+                    </li>
+                    <li class="step-item">
+                        <span class="step-num">3</span>
+                        <strong>アプリケーションパスワードの追加</strong><br>
+                        画面の一番下までスクロールし、「<strong>アプリケーションパスワード</strong>」セクションを見つけます。
+                    </li>
+                    <li class="step-item">
+                        <span class="step-num">4</span>
+                        <strong>名前を入力してパスワードを発行</strong><br>
+                        「新しいアプリケーションパスワード名」に任意の識別名（例：<code>auto-blog-app</code>）を入力し、「新しいアプリケーションパスワードを追加」ボタンをクリックします。
+                    </li>
+                    <li class="step-item">
+                        <span class="step-num">5</span>
+                        <strong>パスワードを保存</strong><br>
+                        画面上に <strong><code>xxxx xxxx xxxx xxxx xxxx xxxx</code></strong> のような24桁のアルファベットのパスワードが1度だけ表示されます。これをそのままコピーして手元に保存してください。
+                    </li>
+                </ol>
+
+                <div class="callout callout-info">
+                    <h4>⚙️ システム設定タブへの入力内容</h4>
+                    <table>
+                        <tr>
+                            <th>項目名</th>
+                            <th>入力する値の例</th>
+                        </tr>
+                        <tr>
+                            <td><strong>WordPress URL</strong></td>
+                            <td><code>https://miyakojima-rentacar.net/article</code> （末尾に <code>/wp-admin</code> は含めない）</td>
+                        </tr>
+                        <tr>
+                            <td><strong>WordPress ユーザー名</strong></td>
+                            <td>WordPressのログインID（ユーザー名）</td>
+                        </tr>
+                        <tr>
+                            <td><strong>アプリケーションパスワード</strong></td>
+                            <td>コピーした24桁の文字列（スペースを含んでいてもそのままで大丈夫です）</td>
+                        </tr>
+                    </table>
+                </div>
+            </section>
+
+            <!-- 5. Gemini APIキーの取得方法 -->
+            <section id="gemini-setup">
+                <h2 class="section-title">5. Gemini APIキーの取得方法（AIの頭脳）</h2>
+                <p>記事の文章を執筆し、各種検索を行うためのAI頭脳である「Gemini」のアクセスキーを取得します。</p>
+                
+                <ol class="step-list">
+                    <li class="step-item">
+                        <span class="step-num">1</span>
+                        <strong>Google AI Studio にアクセス</strong><br>
+                        ブラウザで <a href="https://aistudio.google.com/" target="_blank" class="btn">Google AI Studio</a> を開きます（Googleアカウントでのログインが必要です）。
+                    </li>
+                    <li class="step-item">
+                        <span class="step-num">2</span>
+                        <strong>APIキーの作成を開始</strong><br>
+                        左上、または画面中央にある青いボタン「<strong>Get API key</strong>」をクリックします。
+                    </li>
+                    <li class="step-item">
+                        <span class="step-num">3</span>
+                        <strong>新規APIキーを作成</strong><br>
+                        「<strong>Create API key</strong>」ボタンをクリックします。
+                    </li>
+                    <li class="step-item">
+                        <span class="step-num">4</span>
+                        <strong>プロジェクトの選択・キー生成</strong><br>
+                        「Create API key in new project」（新プロジェクトでキーを作成）を選択すると、APIキーが生成されます。
+                    </li>
+                    <li class="step-item">
+                        <span class="step-num">5</span>
+                        <strong>キーのコピー</strong><br>
+                        <code>AIzaSy...</code> から始まる長大な文字列が表示されるので、コピーしてアプリの「システム設定」タブに入力します。
+                    </li>
+                </ol>
+
+                <div class="callout callout-warning">
+                    <h4>⚠️ 無料枠の利用上限（クォータ）について</h4>
+                    <p>無料のAPIキーは**1日20回までの生成リクエスト**に制限されています。テストで上限を超えてしまった場合は、翌日まで待つか、別のアカウント（別のGmailアドレスなど）で新しく無料キーを発行して差し替えてください。</p>
+                    <p>本格的に毎日多く利用したい場合は、Google AI Studioのメニューから「Billing（請求設定）」を開き、クレジットカード情報を登録して従量課金プラン（Pay-as-you-go）に移行することで、利用制限をほぼ解除できます（費用は1回の記事生成で数円〜十数円程度と極めて低価格です）。</p>
+                </div>
+            </section>
+
+            <!-- 6. Google Maps APIキーの取得 -->
+            <section id="maps-setup">
+                <h2 class="section-title">6. Google Maps APIキーの取得（観光地写真用：任意）</h2>
+                <p>AIが記事中に地名や観光地を紹介した際、自動的にその場所の美しい写真をGoogleマップ上から取得して記事内に埋め込むために使用します。※設定しない場合は写真なしでテキストのみが作成されます。</p>
+
+                <ol class="step-list">
+                    <li class="step-item">
+                        <span class="step-num">1</span>
+                        <strong>Google Cloud Consoleを開く</strong><br>
+                        <a href="https://console.cloud.google.com/" target="_blank" class="btn">Google Cloud Console</a> にログインします。
+                    </li>
+                    <li class="step-item">
+                        <span class="step-num">2</span>
+                        <strong>プロジェクトを作成</strong><br>
+                        初めての場合は「新しいプロジェクトを作成」し、任意の名前を設定します。
+                    </li>
+                    <li class="step-item">
+                        <span class="step-num">3</span>
+                        <strong>請求先アカウントの有効化（必須）</strong><br>
+                        GoogleマップのAPIを使用するためには、Google Cloudのプロジェクトに対してクレジットカードの登録（お支払い設定）を必ず行う必要があります（一定の毎月無料枠があるため、個人開発の範囲であればほぼ料金はかかりません）。
+                    </li>
+                    <li class="step-item">
+                        <span class="step-num">4</span>
+                        <strong>Places APIの有効化</strong><br>
+                        メニュー ＞「APIとサービス」＞「ライブラリ」から、<strong>「Places API (New)」</strong>を検索し、有効化（Enable）します。
+                    </li>
+                    <li class="step-item">
+                        <span class="step-num">5</span>
+                        <strong>APIキーの作成</strong><br>
+                        メニュー ＞「APIとサービス」＞「認証情報」をクリックし、画面上の「＋認証情報を作成」＞「<strong>APIキー</strong>」を選択してキーを生成します。このキーをアプリの設定に入力します。
+                    </li>
+                </ol>
+            </section>
+
+            <!-- 7. Unsplash APIキーの取得 -->
+            <section id="unsplash-setup">
+                <h2 class="section-title">7. Unsplash APIキーの取得（アイキャッチ自動取得用：任意）</h2>
+                <p>自社フォルダに実写の画像素材がないとき、Unsplashという高品質フリー画像サイトからテーマに合わせた宮古島や海の写真を自動検索・ダウンロードして、タイトル加工するために使用します。※設定しない場合は、実写画像フォルダからのみランダムに選ばれます。</p>
+
+                <ol class="step-list">
+                    <li class="step-item">
+                        <span class="step-num">1</span>
+                        <strong>Unsplash Developerを開く</strong><br>
+                        <a href="https://unsplash.com/developers" target="_blank" class="btn">Unsplash Developers</a> にログイン・ユーザー登録します。
+                    </li>
+                    <li class="step-item">
+                        <span class="step-num">2</span>
+                        <strong>アプリケーションを作成</strong><br>
+                        ダッシュボードから「<strong>Your Apps</strong>」＞「<strong>New Application</strong>」をクリックします。規約を確認してチェックを入れます。
+                    </li>
+                    <li class="step-item">
+                        <span class="step-num">3</span>
+                        <strong>Access Keyのコピー</strong><br>
+                        作成したアプリケーションのページを開き、下部に表示される <strong>「Access Key」</strong> をコピーしてアプリの設定に入力します。
+                    </li>
+                </ol>
+            </section>
+
+            <!-- 8. Streamlit Cloudへの配置設定 -->
+            <section id="deploy-setup">
+                <h2 class="section-title">8. Streamlit Cloudへの配置設定（デプロイとSecrets）</h2>
+                <p>GitHubへ最新のコードをプッシュすれば自動的にStreamlit Cloud上のWebアプリも更新されますが、APIキーなどの個人情報をクラウド環境で安全に保持するため、Streamlitの「Secrets」管理画面を設定する必要があります。</p>
+                
+                <ol class="step-list">
+                    <li class="step-item">
+                        <span class="step-num">1</span>
+                        <strong>Streamlit Cloudの管理ダッシュボードを開く</strong><br>
+                        アプリの設定メニューから管理画面に入ります。
+                    </li>
+                    <li class="step-item">
+                        <span class="step-num">2</span>
+                        <strong>Secretsを開く</strong><br>
+                        該当アプリの「<strong>Settings</strong>」アイコンをクリックし、左メニューから「<strong>Secrets</strong>」を選択します。
+                    </li>
+                    <li class="step-item">
+                        <span class="step-num">3</span>
+                        <strong>TOML形式で接続情報を入力</strong><br>
+                        以下の枠内の形式をコピーし、各値を実情報に書き換えてテキストエリアに入力し、「Save」を押します。
+                    </li>
+                </ol>
+
+                <pre><code># Streamlit Cloud専用の設定値 (Secrets)
+GEMINI_API_KEY = "あなたのGemini-APIキー（AIzaSy...）"
+WP_URL = "https://miyakojima-rentacar.net/article"
+WP_USERNAME = "あなたのWordPressユーザー名"
+WP_PASSWORD = "発行したアプリケーションパスワード（24桁の英字）"
+UNSPLASH_ACCESS_KEY = "UnsplashのAccessKey（設定しない場合は空欄で可）"
+GOOGLE_MAPS_API_KEY = "Google Maps APIキー（設定しない場合は空欄で可）"</code></pre>
+
+                <div class="callout callout-info">
+                    <h4>🔒 セキュリティについて</h4>
+                    <p>この「Secrets」に入力した値は、一般のブラウザやGitHub上からは決して見えないようにStreamlit Cloud側で高度に暗号化されて安全に管理されます。</p>
+                </div>
+            </section>
+
+            <!-- 9. トラブルシューティング -->
+            <section id="support">
+                <h2 class="section-title">9. トラブルシューティング（よくある不具合と対策）</h2>
+                
+                <h3>❓ アプリの画面に「ImportError」や真っ赤なエラー画面が出る</h3>
+                <p><strong>対策:</strong> クラウド反映時の読み込みラグや古いキャッシュが原因です。画面右下の「Manage app」から、アプリメニューの<strong>「Reboot app」（再起動）</strong>を実行してください。最新のコードが正しく再読み込みされます。</p>
+
+                <h3>❓ 記事生成を実行すると「429 Resource Exhausted」と出る</h3>
+                <p><strong>対策:</strong> 無料枠のGemini APIの上限（1日20回）に達しました。翌日まで待つか、別アカウントでGoogle AI Studioから無料キーを新規取得して「システム設定」から入れ替えてください。本格的な運用にはクレジットカード登録による有料枠（従量課金プラン）への移行を推奨します。</p>
+
+                <h3>❓ WordPress投稿後に「API接続エラー」や「ステータスコード: 401」と出る</h3>
+                <p><strong>対策:</strong> WordPressのアプリケーションパスワード、またはユーザー名が正しくありません。パスワードにスペースが含まれる場合は、スペースを抜かさずにそのまま（あるいはコピペで）入力してください。また、WordPress側でユーザー情報やセキュリティプラグインによってREST APIの接続が制限されていないかご確認ください。</p>
+
+                <h3>❓ Googleマップの写真が記事の中に全く挿入されない</h3>
+                <p><strong>対策:</strong> Google MapsのAPIキーが正しく設定されていないか、Google Cloud側でお支払い設定（クレジットカード登録）が完了していない、または「Places API (New)」の有効化が忘れている可能性があります。Google Cloud Consoleの設定を再度ご確認ください。</p>
+            </section>
+
+        </main>
+    </div>
+
+    <footer style="text-align: center; padding: 40px 20px; color: var(--text-muted); font-size: 0.9rem; border-top: 1px solid var(--border-color);">
+        <p>© 2026 宮古島レンタカー 自動ブログ生成システム開発部. All rights reserved.</p>
+    </footer>
+
+</body>
+</html>
