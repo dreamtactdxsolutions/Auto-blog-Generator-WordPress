@@ -513,7 +513,7 @@ def insert_spot_images_to_content(content: str, spots: list, api_key: str, save_
         # 3. 挿入するHTMLブロックを構築
         image_block = f"""
 <div style="text-align: center; margin: 35px 0;">
-  <img src="{source_url}" alt="{spot}" style="width: 100%; max-width: 600px; border-radius: 12px; height: auto; box-shadow: 0 4px 15px rgba(0,0,0,0.15);">
+  <img src="{source_url}" alt="{spot}" style="width: 100%; max-width: 100%; border-radius: 12px; height: auto; box-shadow: 0 4px 15px rgba(0,0,0,0.15);">
   {credit_html}
 </div>
 """
@@ -715,7 +715,7 @@ def main():
     if featured_media_url:
         banner_html = f"""
 <div style="text-align: center; margin-bottom: 30px;">
-  <img src="{featured_media_url}" alt="{blog_post.get('title', theme)}" style="width: 100%; max-width: 600px; border-radius: 12px; height: auto; box-shadow: 0 4px 15px rgba(0,0,0,0.15);">
+  <img src="{featured_media_url}" alt="{blog_post.get('title', theme)}" style="width: 100%; max-width: 100%; border-radius: 12px; height: auto; box-shadow: 0 4px 15px rgba(0,0,0,0.15);">
 </div>
 """
         blog_post["content"] = banner_html + blog_post["content"]

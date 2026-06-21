@@ -432,7 +432,7 @@ with tab1:
                 if featured_media_url:
                     banner_html = f"""
 <div style="text-align: center; margin-bottom: 30px;">
-  <img src="{featured_media_url}" alt="{generated_theme}" style="width: 100%; max-width: 600px; border-radius: 12px; height: auto; box-shadow: 0 4px 15px rgba(0,0,0,0.15);">
+  <img src="{featured_media_url}" alt="{generated_theme}" style="width: 100%; max-width: 100%; border-radius: 12px; height: auto; box-shadow: 0 4px 15px rgba(0,0,0,0.15);">
 </div>
 """
                     blog_post["content"] = banner_html + blog_post["content"]
