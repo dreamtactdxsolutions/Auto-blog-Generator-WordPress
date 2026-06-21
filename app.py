@@ -148,10 +148,10 @@ def save_env_values(new_values):
     with open(env_path, "w", encoding="utf-8") as f:
         f.writelines(lines)
 
-# タブ機能で画面を整理
-tab1, tab2 = st.tabs(["📝 記事生成", "⚙️ システム設定"])
+# タブ機能で画面を整理（スポット画像登録用タブを追加）
+tab1, tab2, tab3 = st.tabs(["📝 記事生成", "📷 スポット画像登録", "⚙️ システム設定"])
 
-with tab2:
+with tab3:
     st.markdown("### ⚙️ システム連携・APIキーの設定")
     st.caption("WordPressへの自動投稿やGoogleマップの写真取得に必要な各種キーを編集できます。保存すると `.env` ファイルが自動更新されます。")
     
@@ -186,6 +186,80 @@ with tab2:
         config.WP_PASSWORD = wp_password
         config.UNSPLASH_ACCESS_KEY = unsplash_key
         config.GOOGLE_MAPS_API_KEY = maps_key
+
+with tab2:
+    st.markdown("### 📷 観光地・自社店舗写真の登録・管理")
+    st.caption("AIが記事内で特定の観光地やお店（例:『宮古島レンタカー』など）を執筆した際、Googleマップの一般写真ではなく、こちらで登録した指定写真を優先して自動挿入します。スマホからも名前を指定してアップロードできます。")
+    
+    custom_spots_dir = os.path.join(os.path.dirname(__file__), "images", "custom_spots")
+    if not os.path.exists(custom_spots_dir):
+        os.makedirs(custom_spots_dir)
+        
+    # 新規登録フォーム
+    st.write("#### 🆕 新しい公式写真を登録する")
+    col_up1, col_up2 = st.columns([1, 2])
+    with col_up1:
+        target_spot_name = st.text_input("適用したいスポット・お店の正確な名前", placeholder="例：宮古島レンタカー")
+    with col_up2:
+        uploaded_file = st.file_uploader("写真を選択（スマホの写真ライブラリから選択可能）", type=["png", "jpg", "jpeg"])
+        
+    if st.button("💾 写真をこの名前で保存する"):
+        if not target_spot_name.strip():
+            st.error("❌ エラー: スポット名を入力してください。")
+        elif not uploaded_file:
+            st.error("❌ エラー: 写真ファイルを選択してください。")
+        else:
+            # 拡張子の取得
+            ext = os.path.splitext(uploaded_file.name)[1].lower()
+            if ext not in [".png", ".jpg", ".jpeg"]:
+                ext = ".jpg" # デフォルト
+            
+            # 保存処理
+            save_path = os.path.join(custom_spots_dir, f"{target_spot_name.strip()}{ext}")
+            
+            # 競合ファイルの削除 (他の拡張子があった場合)
+            for other_ext in [".png", ".jpg", ".jpeg"]:
+                other_path = os.path.join(custom_spots_dir, f"{target_spot_name.strip()}{other_ext}")
+                if os.path.exists(other_path):
+                    os.remove(other_path)
+                    
+            with open(save_path, "wb") as f:
+                f.write(uploaded_file.getbuffer())
+                
+            st.success(f"✅ スポット '{target_spot_name.strip()}' の写真を優先画像として登録しました！")
+            st.rerun()
+            
+    # 登録済み一覧の表示
+    st.write("---")
+    st.write("#### 🗂️ 現在登録されている優先写真一覧")
+    
+    if os.path.exists(custom_spots_dir):
+        files = [f for f in os.listdir(custom_spots_dir) if f.lower().endswith(('.png', '.jpg', '.jpeg'))]
+    else:
+        files = []
+        
+    if not files:
+        st.info("現在登録されている優先写真はありません。")
+    else:
+        # グリッド状（3列）で画像と削除ボタンを表示
+        cols = st.columns(3)
+        for i, filename in enumerate(sorted(files)):
+            col = cols[i % 3]
+            spot_name = os.path.splitext(filename)[0]
+            img_path = os.path.join(custom_spots_dir, filename)
+            
+            with col:
+                st.write(f"**📍 {spot_name}**")
+                try:
+                    img = Image.open(img_path)
+                    st.image(img, use_container_width=True)
+                except Exception as e:
+                    st.error("画像の読み込みに失敗しました")
+                    
+                if st.button(f"🗑️ 削除", key=f"del_{spot_name}"):
+                    os.remove(img_path)
+                    st.success(f"'{spot_name}' の写真を削除しました。")
+                    st.rerun()
 
 with tab1:
     st.markdown("### ✍️ 記事の作成モード")

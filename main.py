@@ -476,15 +476,32 @@ def insert_spot_images_to_content(content: str, spots: list, api_key: str, save_
     import re
     modified_content = content
     
+    import os
+    custom_dir = os.path.join(save_dir, "custom_spots")
+    
     for spot in spots:
-        # 1. Googleマップから写真をダウンロード
-        photo_info = download_photo_for_spot(spot, api_key, save_dir)
-        if not photo_info:
-            continue
-            
-        local_path = photo_info.get("local_path")
-        credit_html = photo_info.get("credit_html")
+        # まずローカルの custom_spots フォルダに手動登録された画像（スポット名.png/jpg等）がないか確認します
+        local_path = None
+        credit_html = "" # 自社写真・手動写真のため、撮影者クレジットのHTMLは不要です
         
+        extensions = [".png", ".jpg", ".jpeg", ".PNG", ".JPG", ".JPEG"]
+        if os.path.exists(custom_dir):
+            for ext in extensions:
+                test_path = os.path.join(custom_dir, f"{spot}{ext}")
+                if os.path.exists(test_path):
+                    local_path = test_path
+                    print(f"🌟 スポット '{spot}' の手動登録写真を発見しました: {test_path} (Googleマップ検索をスキップします)")
+                    break
+                    
+        # 手動登録写真がない場合のみ、Googleマップから取得を試みます
+        if not local_path:
+            photo_info = download_photo_for_spot(spot, api_key, save_dir)
+            if not photo_info:
+                continue
+                
+            local_path = photo_info.get("local_path")
+            credit_html = photo_info.get("credit_html", "")
+            
         # 2. WordPressにアップロード
         print(f"📤 スポット写真 '{spot}' をWordPressにアップロード中...")
         upload_res = upload_image_to_wordpress_detailed(wp_url, username, app_password, local_path)
