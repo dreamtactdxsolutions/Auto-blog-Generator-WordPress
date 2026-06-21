@@ -150,7 +150,7 @@ def save_env_values(new_values):
         f.writelines(lines)
 
 # タブ機能で画面を整理
-tab1, tab2, tab3 = st.tabs(["📝 記事生成", "📷 スポット画像登録", "⚙️ システム設定"])
+tab1, tab2, tab3, tab4 = st.tabs(["📝 記事生成", "📷 スポット画像登録", "⚙️ システム設定", "📖 取扱説明書"])
 
 with tab3:
     st.markdown("### ⚙️ システム連携・APIキーの設定")
@@ -490,3 +490,24 @@ with tab1:
                 status_monitor.update(label="❌ エラーにより生成処理が中断されました", state="error")
                 st.error(f"エラー内容: {e}")
                 st.info("システム設定に入力された情報が正しいか再度確認してください。")
+
+with tab4:
+    st.markdown("### 📖 取扱説明書・設定ガイド")
+    st.caption("アプリの使い方や、WordPress・各種API的連携手順、本番デプロイ時の注意点を解説しています。")
+    
+    manual_path = os.path.join(os.path.dirname(__file__), "manual.html")
+    if os.path.exists(manual_path):
+        with open(manual_path, "r", encoding="utf-8") as f:
+            html_content = f.read()
+            
+        # 画像パスをGitHubのリモートURLに置換して、Streamlitのiframe内でも画像が表示されるようにします
+        repo_url = "https://raw.githubusercontent.com/dreamtactdxsolutions/Auto-blog-Generator-WordPress/main/"
+        html_content = html_content.replace("images/manual_header.png", repo_url + "images/manual_header.png")
+        html_content = html_content.replace("images/api_guide.png", repo_url + "images/api_guide.png")
+        html_content = html_content.replace("images/step_guide.png", repo_url + "images/step_guide.png")
+        
+        # iframeでHTMLマニュアルを表示
+        import streamlit.components.v1 as components
+        components.html(html_content, height=900, scrolling=True)
+    else:
+        st.error("取扱説明書ファイル（manual.html）が見つかりませんでした。")
