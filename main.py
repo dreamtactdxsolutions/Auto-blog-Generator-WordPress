@@ -11,7 +11,8 @@ from wordpress import (
     upload_image_to_wordpress, 
     upload_image_to_wordpress_detailed,
     post_article_to_wordpress,
-    get_existing_posts_detailed
+    get_existing_posts_detailed,
+    get_or_create_wp_tags
 )
 from google_maps_fetcher import download_photo_for_spot
 
@@ -720,6 +721,16 @@ def main():
 """
         blog_post["content"] = banner_html + blog_post["content"]
         
+    # 7.5 WordPressのタグ（ハッシュタグ）を取得・作成
+    print("🏷️  記事内のスポット名やキーワードからタグを登録中...")
+    tag_names = list(set(spots + [blog_post.get("keyword", keyword)])) # 重複排除
+    tag_ids = get_or_create_wp_tags(
+        wp_url=config.WP_URL,
+        username=config.WP_USERNAME,
+        app_password=config.WP_PASSWORD,
+        tag_names=tag_names
+    )
+    
     # 8. WordPressへの投稿 (安全のため下書き: status="draft")
     try:
         post_url = post_article_to_wordpress(
@@ -730,6 +741,7 @@ def main():
             content=blog_post.get("content", ""),
             excerpt=blog_post.get("meta_description", ""),
             featured_media_id=featured_media_id,
+            tags=tag_ids,
             status="draft"
         )
         print("==================================================")

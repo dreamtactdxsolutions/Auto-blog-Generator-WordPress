@@ -129,6 +129,7 @@ def post_article_to_wordpress(
     content: str, 
     excerpt: str, 
     featured_media_id: int = None, 
+    tags: list = None,
     status: str = "draft"
 ) -> str:
     """
@@ -147,6 +148,10 @@ def post_article_to_wordpress(
     # アイキャッチ画像IDが指定されている場合はセット
     if featured_media_id:
         data['featured_media'] = featured_media_id
+        
+    # タグIDリストが指定されている場合はセット
+    if tags:
+        data['tags'] = tags
         
     try:
         response = requests.post(
@@ -270,4 +275,63 @@ def get_existing_posts_detailed(wp_url: str, username: str, app_password: str) -
     except Exception as e:
         print(f"⚠️ 詳細付き既存記事の取得中にエラーが発生しました: {e}")
         return []
+
+def get_or_create_wp_tags(wp_url: str, username: str, app_password: str, tag_names: list) -> list:
+    """
+    タグ名（文字列）のリストを受け取り、WordPress上のタグIDのリストに変換します。
+    存在しないタグは自動的に新規作成します。
+    """
+    if not tag_names:
+        return []
+        
+    auth = HTTPBasicAuth(username, app_password)
+    tag_ids = []
+    
+    for name in tag_names:
+        name = name.strip()
+        if not name:
+            continue
+            
+        # 1. 既存のタグを検索
+        search_url = f"{wp_url.rstrip('/')}/wp-json/wp/v2/tags"
+        params = {"search": name}
+        
+        try:
+            response = requests.get(search_url, params=params, auth=auth, timeout=15)
+            matched_id = None
+            if response.status_code == 200:
+                existing_tags = response.json()
+                # 完全一致するタグがあるか確認
+                for t in existing_tags:
+                    if t.get("name") == name:
+                        matched_id = t.get("id")
+                        break
+                
+            if matched_id:
+                tag_ids.append(matched_id)
+                print(f"🏷️ 既存のタグを使用します: {name} (ID: {matched_id})")
+                continue
+            
+            # 2. 存在しない場合は新規作成
+            create_url = f"{wp_url.rstrip('/')}/wp-json/wp/v2/tags"
+            data = {"name": name}
+            create_response = requests.post(create_url, json=data, auth=auth, timeout=15)
+            
+            if create_response.status_code == 201:
+                new_tag = create_response.json()
+                new_id = new_tag.get("id")
+                tag_ids.append(new_id)
+                print(f"🏷️ 新しいタグを作成しました: {name} (ID: {new_id})")
+            else:
+                print(f"⚠️ タグ '{name}' の作成に失敗しました (ステータス: {create_response.status_code})")
+                # 作成に失敗したが、検索結果にある場合はフォールバックとして最初のタグを使用
+                if response.status_code == 200 and existing_tags:
+                    fallback_id = existing_tags[0].get("id")
+                    tag_ids.append(fallback_id)
+                    print(f"   フォールバックとして類似タグID {fallback_id} を使用します。")
+                    
+        except Exception as e:
+            print(f"⚠️ タグ '{name}' の処理中にエラーが発生しました: {e}")
+            
+    return tag_ids
 
