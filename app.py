@@ -11,6 +11,7 @@ from image_processor import create_title_banner
 from wordpress import (
     get_random_image_from_folder, 
     upload_image_to_wordpress, 
+    upload_image_to_wordpress_detailed,
     post_article_to_wordpress,
     get_existing_posts_detailed
 )
@@ -397,6 +398,7 @@ with tab1:
                     )
                     
                 featured_media_id = None
+                featured_media_url = None
                 banner_image = None
                 
                 if image_path:
@@ -416,12 +418,24 @@ with tab1:
                     banner_image = Image.open(processed_image_path)
                     
                     status_monitor.update(label="📤 加工したアイキャッチ画像をWordPressにアップロード中...", state="running")
-                    featured_media_id = upload_image_to_wordpress(
+                    upload_res = upload_image_to_wordpress_detailed(
                         wp_url=cur_wp_url,
                         username=cur_wp_user,
                         app_password=cur_wp_pass,
                         image_path=processed_image_path
                     )
+                    if upload_res:
+                        featured_media_id = upload_res.get("id")
+                        featured_media_url = upload_res.get("source_url")
+                        
+                # 本文の最先頭にアイキャッチ画像バナーを挿入
+                if featured_media_url:
+                    banner_html = f"""
+<div style="text-align: center; margin-bottom: 30px;">
+  <img src="{featured_media_url}" alt="{generated_theme}" style="width: 100%; max-width: 600px; border-radius: 12px; height: auto; box-shadow: 0 4px 15px rgba(0,0,0,0.15);">
+</div>
+"""
+                    blog_post["content"] = banner_html + blog_post["content"]
                     
                 # 7. WordPress投稿
                 status_monitor.update(label=f"📤 ブログ記事データをWordPressへ{'下書き' if wp_status == 'draft' else '公開'}投稿中...", state="running")

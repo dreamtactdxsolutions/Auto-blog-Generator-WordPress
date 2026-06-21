@@ -676,11 +676,12 @@ def main():
             
     # 【ステップC】画像が準備できた場合は、文字入れバナーを生成してからWordPressへアップロード
     featured_media_id = None
+    featured_media_url = None
     if image_path:
         print(f"\n🎨 画像にブログのタイトル文字を合成中...")
         banner_path = os.path.join(image_folder, "processed_banner.jpg")
         
-        # AIが生成したバナー専用 of 改行入りタイトル・副題を取得
+        # AIが生成したバナー専用の改行入りタイトル・副題を取得
         # （存在しない場合のフォールバックとして従来の title と theme を設定）
         banner_title = blog_post.get("banner_title")
         banner_subtitle = blog_post.get("banner_subtitle")
@@ -698,15 +699,27 @@ def main():
         )
         
         print(f"📤 WordPressへアイキャッチ画像をアップロード中...")
-        featured_media_id = upload_image_to_wordpress(
+        upload_res = upload_image_to_wordpress_detailed(
             wp_url=config.WP_URL,
             username=config.WP_USERNAME,
             app_password=config.WP_PASSWORD,
             image_path=processed_image_path
         )
-        if not featured_media_id:
+        if upload_res:
+            featured_media_id = upload_res.get("id")
+            featured_media_url = upload_res.get("source_url")
+        else:
             print("⚠️ 画像のアップロードに失敗したため、画像なしで記事の投稿を継続します。")
             
+    # 本文の最先頭にアイキャッチ画像バナーを挿入
+    if featured_media_url:
+        banner_html = f"""
+<div style="text-align: center; margin-bottom: 30px;">
+  <img src="{featured_media_url}" alt="{blog_post.get('title', theme)}" style="width: 100%; max-width: 600px; border-radius: 12px; height: auto; box-shadow: 0 4px 15px rgba(0,0,0,0.15);">
+</div>
+"""
+        blog_post["content"] = banner_html + blog_post["content"]
+        
     # 8. WordPressへの投稿 (安全のため下書き: status="draft")
     try:
         post_url = post_article_to_wordpress(
