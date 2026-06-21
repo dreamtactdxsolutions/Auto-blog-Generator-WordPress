@@ -1,6 +1,5 @@
 import os
 import sys
-import json
 import streamlit as st
 from PIL import Image
 
@@ -148,7 +147,7 @@ def save_env_values(new_values):
     with open(env_path, "w", encoding="utf-8") as f:
         f.writelines(lines)
 
-# タブ機能で画面を整理（スポット画像登録用タブを追加）
+# タブ機能で画面を整理
 tab1, tab2, tab3 = st.tabs(["📝 記事生成", "📷 スポット画像登録", "⚙️ システム設定"])
 
 with tab3:
@@ -281,45 +280,14 @@ with tab1:
         trend_genre = st.selectbox("リサーチしたい情報のジャンルを選択してください", ["すべて", "グルメ・カフェ・新店舗", "観光スポット・イベント・フェスティバル", "アクティビティ・体験"])
     else:
         st.markdown("### ✍️ 記事の作成条件")
-        # 1. キーワードリストの読み込み
-        keywords_file = os.path.join(os.path.dirname(__file__), "keywords.json")
-        keyword_list = []
-        if os.path.exists(keywords_file):
-            try:
-                with open(keywords_file, "r", encoding="utf-8") as f:
-                    keyword_list = json.load(f)
-            except Exception as e:
-                st.error(f"キーワードファイル（keywords.json）の読み込みに失敗しました: {e}")
-                
-        # プルダウンの選択肢を作成
-        options = ["✨ 新しいテーマを手動で自由に書きたい"]
-        for item in keyword_list:
-            options.append(f"📌 【{item['keyword']}】{item['theme']}")
-            
-        selected_option = st.selectbox("作成したいブログ記事のテーマを選んでください", options)
-        
-        # 入力項目エリア
         col_input1, col_input2 = st.columns(2)
         
-        if selected_option == "✨ 新しいテーマを手動で自由に書きたい":
-            with col_input1:
-                theme = st.text_input("記事のタイトル（テーマ名）", placeholder="例：宮古島をレンタカーで巡る！1日王道絶景ドライブモデルコース")
-                keyword = st.text_input("主要検索キーワード", placeholder="例：宮古島 ドライブコース")
-            with col_input2:
-                sub_keywords_input = st.text_area("関連キーワード (カンマ `,` または改行で区切ってください)", placeholder="例：伊良部大橋, 東平安名崎, レンタカー, ドライブ")
-                sub_keywords = [k.strip() for k in sub_keywords_input.replace("\n", ",").split(",") if k.strip()]
-        else:
-            # keywords.json から選ばれたデータを取得
-            selected_index = options.index(selected_option) - 1
-            selected_data = keyword_list[selected_index]
-            
-            with col_input1:
-                theme = st.text_input("記事のタイトル（テーマ名）", value=selected_data["theme"])
-                keyword = st.text_input("主要検索キーワード", value=selected_data["keyword"])
-            with col_input2:
-                default_sub = ", ".join(selected_data.get("sub_keywords", []))
-                sub_keywords_input = st.text_area("関連キーワード (カンマ `,` または改行で区切ってください)", value=default_sub)
-                sub_keywords = [k.strip() for k in sub_keywords_input.replace("\n", ",").split(",") if k.strip()]
+        with col_input1:
+            theme = st.text_input("記事のタイトル（テーマ名）", placeholder="例：宮古島をレンタカーで巡る！1日王道絶景ドライブモデルコース")
+            keyword = st.text_input("主要検索キーワード", placeholder="例：宮古島 ドライブコース")
+        with col_input2:
+            sub_keywords_input = st.text_area("関連キーワード (カンマ `,` または改行で区切ってください)", placeholder="例：伊良部大橋, 東平安名崎, レンタカー, ドライブ")
+            sub_keywords = [k.strip() for k in sub_keywords_input.replace("\n", ",").split(",") if k.strip()]
             
     st.markdown("---")
     st.markdown("### ⚙️ オプション設定")
