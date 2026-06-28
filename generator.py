@@ -215,10 +215,10 @@ HTML形式の記事本文
             )
             text = response.text
         elif ai_model.lower() == "claude":
-            print("✍️ Claude 3.5 Sonnet を使用して執筆中...")
+            print("✍️ Claude Sonnet 4.6 を使用して執筆中...")
             claude_client = Anthropic(api_key=api_key)
             response = claude_client.messages.create(
-                model="claude-3-5-sonnet-latest",
+                model="claude-sonnet-4-6",
                 max_tokens=4000,
                 temperature=0.6,
                 system="あなたは宮古島のレンタカー会社「宮古島レンタカー」のブログ編集部（現地スタッフ）です。提供されたフォーマットと厳格なルールに従って、日本語でブログ記事を出力してください。",
