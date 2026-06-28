@@ -43,7 +43,7 @@ Google検索ツールを使って、2026年現在の宮古島に関する{genre_
 最近（2025〜2026年）オープンしたお店、開催予定のイベント、観光客に話題の過ごし方などを箇条書きで具体的にまとめてください。
 """
             research_response = research_client.models.generate_content(
-                model='gemini-2.5-flash',
+                model='gemini-3.5-flash',
                 contents=research_prompt,
                 config=types.GenerateContentConfig(
                     temperature=0.4,
@@ -206,7 +206,7 @@ HTML形式の記事本文
         text = ""
         if ai_model.lower() == "gemini":
             response = client.models.generate_content(
-                model='gemini-2.5-flash',
+                model='gemini-3.5-flash',
                 contents=prompt,
                 config=types.GenerateContentConfig(
                     temperature=0.6,

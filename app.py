@@ -303,7 +303,7 @@ with tab1:
         use_maps_photos = st.checkbox("Googleマップからスポットの絶景写真を自動取得し、記事中に挿入する", value=True, help="Places APIを使って観光地の写真を検索し、撮影者へのクレジットと共に記事内に自動配置します。")
         use_unsplash = st.checkbox("アイキャッチ画像をUnsplashから自動取得する（ローカル画像が不足している場合のみ）", value=True, help="imagesフォルダに実写画像が無い場合、自動で海の画像を検索・ダウンロードしてバナーに加工します。")
     with col_opt2:
-        selected_model = st.selectbox("使用するAIモデル", ["Gemini 2.5 Flash", "Claude Sonnet 4.6"], index=0, help="ブログの執筆を行うAIモデルを選択します。Claudeを使用する場合はシステム設定でClaude用のAPIキーを設定してください。")
+        selected_model = st.selectbox("使用するAIモデル", ["Gemini 3.5 Flash", "Claude Sonnet 4.6"], index=0, help="ブログの執筆を行うAIモデルを選択します。Claudeを使用する場合はシステム設定でClaude用のAPIキーを設定してください。")
         ai_model = "claude" if "Claude" in selected_model else "gemini"
         
         post_status = st.selectbox("WordPressへの公開ステータス", ["下書き (draft) - 推奨", "公開 (publish)"], index=0, help="まずは下書きで登録し、確認したのちに公開するのが安全です。")
