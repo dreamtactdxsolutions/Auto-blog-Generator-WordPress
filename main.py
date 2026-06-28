@@ -547,8 +547,18 @@ def main():
     print("🌴 宮古島レンタカー ブログ記事自動生成＆投稿システム 🌴")
     print("==================================================")
     
+    # 引数または環境変数からAIモデルを取得 (デフォルトは gemini)
+    ai_model = os.getenv("AI_MODEL", "gemini").lower()
+    if "--model" in sys.argv:
+        try:
+            model_idx = sys.argv.index("--model")
+            if model_idx + 1 < len(sys.argv):
+                ai_model = sys.argv[model_idx + 1].lower()
+        except ValueError:
+            pass
+            
     # 1. 設定ファイルのバリデーション（チェック）
-    if not config.validate_config():
+    if not config.validate_config(ai_model=ai_model):
         sys.exit(1)
         
     # 2. キーワードリストの読み込み
@@ -602,17 +612,19 @@ def main():
     # 重複回避用のタイトルリストを抽出
     existing_titles = [post['title'] for post in existing_posts]
     
-    # 5. Gemini APIによる記事の生成 (既存タイトルを渡して重複回避)
+    # 5. APIによる記事の生成 (既存タイトルを渡して重複回避)
+    active_key = config.GEMINI_API_KEY if ai_model == "gemini" else config.ANTHROPIC_API_KEY
     try:
         blog_post = generate_blog_article(
-            api_key=config.GEMINI_API_KEY,
+            api_key=active_key,
             keyword=keyword,
             theme=theme,
             sub_keywords=sub_keywords,
-            existing_titles=existing_titles
+            existing_titles=existing_titles,
+            ai_model=ai_model
         )
     except Exception as e:
-        print("❌ 記事の生成に失敗したため、処理を中断します。")
+        print(f"❌ 記事の生成に失敗しました。\n{e}")
         sys.exit(1)
         
     # 6. あわせて読みたい（関連記事）の自動選定と定型CTAのマージ

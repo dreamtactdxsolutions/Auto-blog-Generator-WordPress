@@ -105,7 +105,7 @@ def load_env_values():
     # 1. クラウド環境用に st.secrets から初期値を読み込みます
     try:
         import streamlit as st
-        keys = ["GEMINI_API_KEY", "WP_URL", "WP_USERNAME", "WP_PASSWORD", "UNSPLASH_ACCESS_KEY", "GOOGLE_MAPS_API_KEY"]
+        keys = ["GEMINI_API_KEY", "WP_URL", "WP_USERNAME", "WP_PASSWORD", "UNSPLASH_ACCESS_KEY", "GOOGLE_MAPS_API_KEY", "ANTHROPIC_API_KEY"]
         for k in keys:
             if k in st.secrets:
                 values[k] = st.secrets[k]
@@ -165,6 +165,7 @@ with tab3:
         wp_username = st.text_input("WordPress ユーザー名", value=env_values.get("WP_USERNAME", ""))
         wp_password = st.text_input("WordPress アプリケーションパスワード", value=env_values.get("WP_PASSWORD", ""), type="password", help="WordPressの管理画面 ＞ ユーザー ＞ プロフィール から生成できるパスワード")
     with col_env2:
+        anthropic_key = st.text_input("Claude (Anthropic) APIキー", value=env_values.get("ANTHROPIC_API_KEY", ""), type="password", help="Anthropic Consoleから取得したAPIキー")
         unsplash_key = st.text_input("Unsplash APIキー (アイキャッチ自動取得用：任意)", value=env_values.get("UNSPLASH_ACCESS_KEY", ""), help="Unsplashの開発者用Access Key")
         maps_key = st.text_input("Google Maps APIキー (観光地写真用：任意)", value=env_values.get("GOOGLE_MAPS_API_KEY", ""), type="password", help="Google Cloud Consoleから取得したPlaces APIが有効なAPIキー")
         
@@ -175,7 +176,8 @@ with tab3:
             "WP_USERNAME": wp_username,
             "WP_PASSWORD": wp_password,
             "UNSPLASH_ACCESS_KEY": unsplash_key,
-            "GOOGLE_MAPS_API_KEY": maps_key
+            "GOOGLE_MAPS_API_KEY": maps_key,
+            "ANTHROPIC_API_KEY": anthropic_key
         }
         save_env_values(new_env)
         st.success("✅ 設定情報を保存しました！システムに即時反映されます。")
@@ -186,6 +188,8 @@ with tab3:
         config.WP_USERNAME = wp_username
         config.WP_PASSWORD = wp_password
         config.UNSPLASH_ACCESS_KEY = unsplash_key
+        config.GOOGLE_MAPS_API_KEY = maps_key
+        config.ANTHROPIC_API_KEY = anthropic_key
         config.GOOGLE_MAPS_API_KEY = maps_key
 
 with tab2:
@@ -299,6 +303,9 @@ with tab1:
         use_maps_photos = st.checkbox("Googleマップからスポットの絶景写真を自動取得し、記事中に挿入する", value=True, help="Places APIを使って観光地の写真を検索し、撮影者へのクレジットと共に記事内に自動配置します。")
         use_unsplash = st.checkbox("アイキャッチ画像をUnsplashから自動取得する（ローカル画像が不足している場合のみ）", value=True, help="imagesフォルダに実写画像が無い場合、自動で海の画像を検索・ダウンロードしてバナーに加工します。")
     with col_opt2:
+        selected_model = st.selectbox("使用するAIモデル", ["Gemini 2.5 Flash", "Claude 3.5 Sonnet"], index=0, help="ブログの執筆を行うAIモデルを選択します。Claudeを使用する場合はシステム設定でClaude用のAPIキーを設定してください。")
+        ai_model = "claude" if "Claude" in selected_model else "gemini"
+        
         post_status = st.selectbox("WordPressへの公開ステータス", ["下書き (draft) - 推奨", "公開 (publish)"], index=0, help="まずは下書きで登録し、確認したのちに公開するのが安全です。")
         wp_status = "draft" if "下書き" in post_status else "publish"
         
@@ -309,14 +316,30 @@ with tab1:
         # 設定チェック
         env_values = load_env_values()
         cur_gemini = env_values.get("GEMINI_API_KEY", "")
+        cur_anthropic = env_values.get("ANTHROPIC_API_KEY", "")
         cur_wp_url = env_values.get("WP_URL", "")
         cur_wp_user = env_values.get("WP_USERNAME", "")
         cur_wp_pass = env_values.get("WP_PASSWORD", "")
         cur_maps_key = env_values.get("GOOGLE_MAPS_API_KEY", "")
         cur_unsplash_key = env_values.get("UNSPLASH_ACCESS_KEY", "")
         
-        if not cur_gemini or not cur_wp_url or not cur_wp_user or not cur_wp_pass:
-            st.error("❌ 接続エラー: システム設定タブに必要なAPIキーやWordPress接続情報が入力されていません。設定を入力してから再実行してください。")
+        # 選択されたモデルに応じたキーのチェック
+        active_api_key = cur_gemini if ai_model == "gemini" else cur_anthropic
+        
+        # トレンドリサーチかつClaudeの場合にGemini APIキーも必要であることをチェック
+        has_required_keys = True
+        if ai_model == "claude" and use_trend_research:
+            if not cur_gemini or not cur_anthropic:
+                has_required_keys = False
+        else:
+            if not active_api_key:
+                has_required_keys = False
+
+        if not has_required_keys or not cur_wp_url or not cur_wp_user or not cur_wp_pass:
+            if ai_model == "claude" and use_trend_research:
+                st.error("❌ 接続エラー: トレンドリサーチモードでClaudeを使用するには、Gemini APIキーとClaude APIキーの両方をシステム設定に入力してください。")
+            else:
+                st.error(f"❌ 接続エラー: 選択されたAIモデル（{selected_model}）のAPIキーまたはWordPress接続情報が入力されていません。設定を入力してから再実行してください。")
         elif not use_trend_research and (not theme or not keyword):
             st.error("❌ 入力エラー: テーマ指定モードでは、記事のタイトルと主要キーワードは必須です。入力してください。")
         else:
@@ -334,15 +357,16 @@ with tab1:
                 existing_titles = [post['title'] for post in existing_posts]
                 
                 # 2. 記事の生成
-                status_monitor.update(label="🤖 Gemini AIがブログ記事を執筆中...（数分かかる場合があります）", state="running")
+                status_monitor.update(label=f"🤖 {selected_model}がブログ記事を執筆中...（数分かかる場合があります）", state="running")
                 blog_post = generate_blog_article(
-                    api_key=cur_gemini,
+                    api_key=active_api_key,
                     keyword=keyword,
                     theme=theme,
                     sub_keywords=sub_keywords,
                     existing_titles=existing_titles,
                     use_trend_research=use_trend_research,
-                    trend_genre=trend_genre
+                    trend_genre=trend_genre,
+                    ai_model=ai_model
                 )
                 
                 generated_theme = blog_post.get("title", theme)
@@ -488,8 +512,12 @@ with tab1:
                     
             except Exception as e:
                 status_monitor.update(label="❌ エラーにより生成処理が中断されました", state="error")
-                st.error(f"エラー内容: {e}")
-                st.info("システム設定に入力された情報が正しいか再度確認してください。")
+                error_msg = str(e)
+                if "Gemini APIの利用制限" in error_msg:
+                    st.error(error_msg)
+                else:
+                    st.error(f"エラー内容: {e}")
+                    st.info("システム設定に入力された情報が正しいか再度確認してください。")
 
 with tab4:
     st.markdown("### 📖 取扱説明書・設定ガイド")

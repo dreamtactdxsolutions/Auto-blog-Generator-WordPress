@@ -2,6 +2,9 @@ import os
 import re
 from google import genai
 from google.genai import types
+from anthropic import Anthropic
+import config
+
 def generate_blog_article(
     api_key: str, 
     keyword: str = None, 
@@ -9,9 +12,12 @@ def generate_blog_article(
     sub_keywords: list = None, 
     existing_titles: list = None,
     use_trend_research: bool = False,
-    trend_genre: str = "すべて"
+    trend_genre: str = "すべて",
+    ai_model: str = "gemini"
 ) -> dict:
-    client = genai.Client(api_key=api_key)
+    client = None
+    if ai_model.lower() == "gemini":
+        client = genai.Client(api_key=api_key)
     
     existing_titles_section = ""
     if existing_titles:
@@ -23,8 +29,42 @@ def generate_blog_article(
 """
     
     if use_trend_research:
-        genre_str = f"特に指定されたジャンル「{trend_genre}」に関連する最新トレンドに注目してください。" if trend_genre else ""
-        prompt_topic = f"""
+        if ai_model.lower() == "claude":
+            # Claudeの場合、検索機能がないため、まずGeminiを使ってGoogle検索でリサーチを行います（ハイブリッド構成）
+            gemini_key = config.GEMINI_API_KEY
+            if not gemini_key or "your_gemini_api_key" in gemini_key:
+                raise Exception("トレンドリサーチモードでClaudeを使用するには、システム設定でGemini APIキーも入力してください。")
+            
+            print("🔍 Gemini APIとGoogle検索を使用して最新情報をリサーチ中...")
+            research_client = genai.Client(api_key=gemini_key)
+            genre_str = f"特に指定されたジャンル「{trend_genre}」に関連する最新トレンド" if trend_genre else "最新の観光情報やイベント"
+            research_prompt = f"""
+Google検索ツールを使って、2026年現在の宮古島に関する{genre_str}について詳しくリサーチしてください。
+最近（2025〜2026年）オープンしたお店、開催予定のイベント、観光客に話題の過ごし方などを箇条書きで具体的にまとめてください。
+"""
+            research_response = research_client.models.generate_content(
+                model='gemini-2.5-flash',
+                contents=research_prompt,
+                config=types.GenerateContentConfig(
+                    temperature=0.4,
+                    tools=[{"google_search": {}}],
+                ),
+            )
+            research_result = research_response.text
+            
+            prompt_topic = f"""
+【今回の指令 (最新トレンドリサーチ)】
+以下は、Google検索ツールによってリサーチされた2026年現在の宮古島の最新情報です：
+---
+{research_result}
+---
+
+上記の最新情報の中から、読者（特にレンタカーを利用する観光客）が「今最も知りたい！行ってみたい！」と感じるようなテーマを1つ厳選し、その情報を中心に深く掘り下げた魅力的なブログ記事を執筆してください。
+記事のタイトル、主要キーワード、関連キーワードは、あなたのリサーチ結果に基づいて自動でふさわしいものを決定し、出力フォーマットに従って出力してください。
+"""
+        else:
+            genre_str = f"特に指定されたジャンル「{trend_genre}」に関連する最新トレンドに注目してください。" if trend_genre else ""
+            prompt_topic = f"""
 【今回の指令 (最新トレンドリサーチ)】
 Google検索ツールを使って、2026年現在の宮古島に関する最新の観光情報や流行の話題をくまなくリサーチしてください。
 {genre_str}
@@ -160,21 +200,36 @@ HTML形式の記事本文
 [CONTENT_END]
 """
 
-    print(f"🤖 Gemini APIを使用して記事を生成中... (モード: {'トレンドリサーチ' if use_trend_research else 'テーマ指定'}) (Google検索グラウンディング有効)")
+    print(f"🤖 {ai_model.upper()}を使用して記事を生成中... (モード: {'トレンドリサーチ' if use_trend_research else 'テーマ指定'})")
     
     try:
-        response = client.models.generate_content(
-            model='gemini-2.5-flash',
-            contents=prompt,
-            config=types.GenerateContentConfig(
+        text = ""
+        if ai_model.lower() == "gemini":
+            response = client.models.generate_content(
+                model='gemini-2.5-flash',
+                contents=prompt,
+                config=types.GenerateContentConfig(
+                    temperature=0.6,
+                    tools=[{"google_search": {}}],
+                ),
+            )
+            text = response.text
+        elif ai_model.lower() == "claude":
+            print("✍️ Claude 3.5 Sonnet を使用して執筆中...")
+            claude_client = Anthropic(api_key=api_key)
+            response = claude_client.messages.create(
+                model="claude-3-5-sonnet-latest",
+                max_tokens=4000,
                 temperature=0.6,
-                tools=[{"google_search": {}}],
-            ),
-        )
-        
-        text = response.text
+                system="あなたは宮古島のレンタカー会社「宮古島レンタカー」のブログ編集部（現地スタッフ）です。提供されたフォーマットと厳格なルールに従って、日本語でブログ記事を出力してください。",
+                messages=[
+                    {"role": "user", "content": prompt}
+                ]
+            )
+            text = response.content[0].text
+            
         if not text:
-            raise Exception("Gemini API から応答テキストが返されませんでした。")
+            raise Exception(f"{ai_model.upper()} API から応答テキストが返されませんでした。")
         
         title_match = re.search(r'\[TITLE_START\](.*?)\[TITLE_END\]', text, re.DOTALL)
         keyword_match = re.search(r'\[KEYWORD_START\](.*?)\[KEYWORD_END\]', text, re.DOTALL)
@@ -244,7 +299,75 @@ HTML形式の記事本文
         }
         
     except Exception as e:
+        error_msg = str(e)
+        if "429" in error_msg or "RESOURCE_EXHAUSTED" in error_msg:
+            friendly_msg = build_friendly_429_message(error_msg)
+            print(f"❌ {friendly_msg}")
+            raise RuntimeError(friendly_msg) from e
+            
         print(f"❌ 記事生成中にエラーが発生しました: {e}")
         import traceback
         traceback.print_exc()
         raise e
+
+def build_friendly_429_message(original_error_msg: str) -> str:
+    import re
+    from datetime import datetime, timedelta
+
+    # 秒数を抽出するパターン
+    # 例： "Please retry in 39.817274777s."
+    retry_match = re.search(r'Please retry in\s+([0-9\.]+)\s*s', original_error_msg, re.IGNORECASE)
+    # 例： "'retryDelay': '39s'"
+    delay_match = re.search(r"['\"]retryDelay['\"]\s*:\s*['\"]([0-9\.]+)\s*s['\"]", original_error_msg, re.IGNORECASE)
+    
+    seconds = None
+    if retry_match:
+        try:
+            seconds = float(retry_match.group(1))
+        except ValueError:
+            pass
+    elif delay_match:
+        try:
+            seconds = float(delay_match.group(1))
+        except ValueError:
+            pass
+
+    header = "🚨 Gemini APIの利用制限（429 RESOURCE_EXHAUSTED）に達しました。\n"
+    reason = "無料枠の制限（1日あたり20リクエスト、または1分あたりの上限）を超えたため、一時的にAPIが利用できなくなっています。\n\n"
+    
+    if seconds is not None:
+        now = datetime.now()
+        resume_time = now + timedelta(seconds=seconds)
+        
+        # 待機時間の表記フォーマット
+        if seconds < 60:
+            wait_str = f"約 {int(seconds)} 秒間"
+        elif seconds < 3600:
+            minutes = int(seconds // 60)
+            sec = int(seconds % 60)
+            wait_str = f"約 {minutes} 分 {sec} 秒間"
+        else:
+            hours = int(seconds // 3600)
+            minutes = int((seconds % 3600) // 60)
+            sec = int(seconds % 60)
+            wait_str = f"約 {hours} 時間 {minutes} 分 {sec} 秒間"
+
+        # 再開予想時刻のフォーマット（日付が変わるかをチェック）
+        if resume_time.date() > now.date():
+            time_format = resume_time.strftime("明日 %m月%d日 %H時%M分%S秒")
+        else:
+            time_format = resume_time.strftime("%H時%M分%S秒")
+
+        time_info = f"🕒 【再開予定時刻】\n{time_format} までお待ちください。（待機時間：{wait_str}）\n\n"
+    else:
+        time_info = "🕒 【再開予定時刻】\nしばらく時間（数分〜数時間）を置いてから再度お試しください。\n\n"
+
+    suggestions = (
+        "💡 【解決策】\n"
+        "1. 上記の再開予定時刻まで待ってから、もう一度実行する。\n"
+        "2. Google AI Studio ( https://aistudio.google.com/ ) で新しい別の無料APIキーを取得し、システム設定から入れ替える。\n"
+        "3. Google AI Studioで支払い方法（クレジットカード等）を登録し、有料プラン（従量課金）へ移行して制限を解除する。"
+    )
+    
+    return header + reason + time_info + suggestions
+

@@ -330,6 +330,7 @@
                 <li><a href="#custom-images">3. 優先スポット写真の登録</a></li>
                 <li><a href="#wp-setup">4. WordPress連携の設定手順</a></li>
                 <li><a href="#gemini-setup">5. Gemini APIキーの取得方法</a></li>
+                <li><a href="#claude-setup">5-2. Claude (Anthropic) APIキーの取得</a></li>
                 <li><a href="#maps-setup">6. Google Maps APIキーの取得</a></li>
                 <li><a href="#unsplash-setup">7. Unsplash APIキーの取得</a></li>
                 <li><a href="#deploy-setup">8. Streamlit Cloudへの配置設定</a></li>
@@ -521,6 +522,41 @@
                     <h4>⚠️ 無料枠の利用上限（クォータ）について</h4>
                     <p>無料のAPIキーは**1日20回までの生成リクエスト**に制限されています。テストで上限を超えてしまった場合は、翌日まで待つか、別のアカウント（別のGmailアドレスなど）で新しく無料キーを発行して差し替えてください。</p>
                     <p>本格的に毎日多く利用したい場合は、Google AI Studioのメニューから「Billing（請求設定）」を開き、クレジットカード情報を登録して従量課金プラン（Pay-as-you-go）に移行することで、利用制限をほぼ解除できます（費用は1回の記事生成で数円〜十数円程度と極めて低価格です）。</p>
+                </div>
+            </section>
+
+            <!-- 5-2. Claude (Anthropic) APIキーの取得 -->
+            <section id="claude-setup">
+                <h2 class="section-title">5-2. Claude (Anthropic) APIキーの取得方法（AIの頭脳・もう一つの選択肢）</h2>
+                <p>記事の執筆に高品質なAIモデル <strong>「Claude 3.5 Sonnet」</strong> を使用するために必要となるAPIキーの取得手順です。Claudeは表現力豊かで自然な日本語の記事作成に優れています。</p>
+                <p>※Claudeを使用するには、アカウントへの事前チャージ（クレジットチャージ）が必要です。Geminiのような完全な無料プランはありませんのでご注意ください。</p>
+
+                <ol class="step-list">
+                    <li class="step-item">
+                        <span class="step-num">1</span>
+                        <strong>Anthropic Consoleにログイン</strong><br>
+                        <a href="https://console.anthropic.com/" target="_blank">Anthropic Console (https://console.anthropic.com/)</a> にアクセスし、Googleアカウントまたはメールアドレスでログイン（またはサインアップ）します。
+                    </li>
+                    <li class="step-item">
+                        <span class="step-num">2</span>
+                        <strong>クレジットのチャージ（必須）</strong><br>
+                        画面上の「Billing（請求設定）」を開き、クレジットカードを登録の上、最低5ドル（約800円〜）からのクレジットをチャージ（購入）します。ClaudeはAPIキーを作成するだけでは使えず、チャージ済みの残高が残っている必要があります。
+                    </li>
+                    <li class="step-item">
+                        <span class="step-num">3</span>
+                        <strong>APIキーの作成</strong><br>
+                        メニューから「API Keys」を選択し、画面中央の「Create Key」ボタンをクリックします。
+                    </li>
+                    <li class="step-item">
+                        <span class="step-num">4</span>
+                        <strong>名前の設定とコピー</strong><br>
+                        キーに判別しやすい名前（例: <code>Miyakojima-Blog-Generator</code>）を付け、「Create key」を選択します。画面上に <code>sk-ant-api...</code> から始まる長大な文字列が表示されるので、コピーしてアプリの「システム設定」タブに入力します。
+                    </li>
+                </ol>
+
+                <div class="callout callout-info">
+                    <h4>💡 トレンドリサーチ機能でのハイブリッド連携</h4>
+                    <p>Claudeは自身でGoogle検索を行うことができません。しかし、本アプリで「トレンドリサーチモード」を選択した場合は、ネット検索のみGeminiが行い、そこでリサーチされた情報を元にClaudeが記事を執筆する『ハイブリッド方式』で動作します。そのため、トレンドリサーチモードをClaudeで動かすためには、GeminiとClaudeの両方のAPIキーが必要になります。</p>
                 </div>
             </section>
 
