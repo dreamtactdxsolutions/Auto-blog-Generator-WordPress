@@ -542,65 +542,17 @@ def insert_spot_images_to_content(content: str, spots: list, api_key: str, save_
             
     return modified_content
 
-def main():
-    print("==================================================")
-    print("🌴 宮古島レンタカー ブログ記事自動生成＆投稿システム 🌴")
-    print("==================================================")
-    
-    # 引数または環境変数からAIモデルを取得 (デフォルトは gemini)
-    ai_model = os.getenv("AI_MODEL", "gemini").lower()
-    if "--model" in sys.argv:
-        try:
-            model_idx = sys.argv.index("--model")
-            if model_idx + 1 < len(sys.argv):
-                ai_model = sys.argv[model_idx + 1].lower()
-        except ValueError:
-            pass
-            
-    # 1. 設定ファイルのバリデーション（チェック）
-    if not config.validate_config(ai_model=ai_model):
-        sys.exit(1)
-        
-    # 2. キーワードリストの読み込み
-    keywords_file = os.path.join(os.path.dirname(__file__), "keywords.json")
-    if not os.path.exists(keywords_file):
-        print(f"❌ エラー: キーワードファイル '{keywords_file}' が見つかりません。")
-        sys.exit(1)
-        
-    try:
-        with open(keywords_file, "r", encoding="utf-8") as f:
-            keyword_list = json.load(f)
-    except Exception as e:
-        print(f"❌ エラー: キーワードファイルの読み込みに失敗しました: {e}")
-        sys.exit(1)
-        
-    if not keyword_list:
-        print("❌ エラー: キーワードリストが空です。")
-        sys.exit(1)
-        
-    # 3. 記事テーマの選定
-    if len(sys.argv) > 1:
-        try:
-            index = int(sys.argv[1])
-            selected = keyword_list[index % len(keyword_list)]
-            print(f"💡 コマンド引数より、リストの {index} 番目のテーマを執筆します。")
-        except ValueError:
-            selected = random.choice(keyword_list)
-            print("💡 ランダムなテーマを執筆します。")
-    else:
-        selected = random.choice(keyword_list)
-        print("💡 ランダムなテーマを執筆します。")
-        
-    keyword = selected.get("keyword")
-    theme = selected.get("theme")
-    sub_keywords = selected.get("sub_keywords", [])
-    
-    print(f"\n📌 今回執筆するテーマ:")
-    print(f"  - テーマ名　: {theme}")
-    print(f"  - 主要ワード: {keyword}")
-    print(f"  - 関連ワード: {', '.join(sub_keywords)}")
-    print("==================================================")
-    
+def generate_and_post_single_article(
+    keyword: str,
+    theme: str,
+    sub_keywords: list,
+    ai_model: str,
+    wp_status: str = "draft",
+    post_date: str = None
+) -> str:
+    """
+    1件の記事を生成し、画像合成・タグ登録を行って WordPress へ投稿（または予約投稿）します。
+    """
     # 4. WordPressから既存の投稿詳細情報を取得
     print("🔍 WordPressから過去の公開済み記事の一覧を取得しています...")
     existing_posts = get_existing_posts_detailed(
@@ -614,18 +566,14 @@ def main():
     
     # 5. APIによる記事の生成 (既存タイトルを渡して重複回避)
     active_key = config.GEMINI_API_KEY if ai_model == "gemini" else config.ANTHROPIC_API_KEY
-    try:
-        blog_post = generate_blog_article(
-            api_key=active_key,
-            keyword=keyword,
-            theme=theme,
-            sub_keywords=sub_keywords,
-            existing_titles=existing_titles,
-            ai_model=ai_model
-        )
-    except Exception as e:
-        print(f"❌ 記事の生成に失敗しました。\n{e}")
-        sys.exit(1)
+    blog_post = generate_blog_article(
+        api_key=active_key,
+        keyword=keyword,
+        theme=theme,
+        sub_keywords=sub_keywords,
+        existing_titles=existing_titles,
+        ai_model=ai_model
+    )
         
     # 6. あわせて読みたい（関連記事）の自動選定と定型CTAのマージ
     print("🔗 今回の記事に関連する過去の記事を自動選定中...")
@@ -649,7 +597,7 @@ def main():
     # Googleマップの観光地写真の自動挿入
     spots = blog_post.get("spots", [])
     if spots and config.GOOGLE_MAPS_API_KEY and "your_google_maps_api_key" not in config.GOOGLE_MAPS_API_KEY:
-        print(f"🗺️  Googleマップから {len(spots)} 個のスポット写真を自動取得し、挿入します...")
+        print(f"🗺️  Googleマップから {len(spots)} 個 of スポット写真を自動取得し、挿入します...")
         processed_content = insert_spot_images_to_content(
             content=processed_content,
             spots=spots,
@@ -694,8 +642,6 @@ def main():
         print(f"\n🎨 画像にブログのタイトル文字を合成中...")
         banner_path = os.path.join(image_folder, "processed_banner.jpg")
         
-        # AIが生成したバナー専用の改行入りタイトル・副題を取得
-        # （存在しない場合のフォールバックとして従来の title と theme を設定）
         banner_title = blog_post.get("banner_title")
         banner_subtitle = blog_post.get("banner_subtitle")
         
@@ -743,25 +689,154 @@ def main():
         tag_names=tag_names
     )
     
-    # 8. WordPressへの投稿 (安全のため下書き: status="draft")
+    # 投稿ステータスと投稿日時の整理
+    formatted_date = None
+    actual_status = wp_status
+    if post_date:
+        # "2026-07-10 12:00:00" -> "2026-07-10T12:00:00"
+        formatted_date = post_date.strip().replace(" ", "T")
+        # 予約投稿時は WordPress API 側で status を 'future' に指定します
+        actual_status = "future"
+    
+    # 8. WordPressへの投稿
+    post_url = post_article_to_wordpress(
+        wp_url=config.WP_URL,
+        username=config.WP_USERNAME,
+        app_password=config.WP_PASSWORD,
+        title=blog_post.get("title", theme),
+        content=blog_post.get("content", ""),
+        excerpt=blog_post.get("meta_description", ""),
+        featured_media_id=featured_media_id,
+        tags=tag_ids,
+        status=actual_status,
+        date=formatted_date
+    )
+    return post_url
+
+def main():
+    print("==================================================")
+    print("🌴 宮古島レンタカー ブログ記事自動生成＆投稿システム 🌴")
+    print("==================================================")
+    
+    # 引数または環境変数からAIモデルを取得 (デフォルトは gemini)
+    ai_model = os.getenv("AI_MODEL", "gemini").lower()
+    if "--model" in sys.argv:
+        try:
+            model_idx = sys.argv.index("--model")
+            if model_idx + 1 < len(sys.argv):
+                ai_model = sys.argv[model_idx + 1].lower()
+        except ValueError:
+            pass
+            
+    # CSV一括実行の引数チェック
+    csv_file = None
+    if "--csv" in sys.argv:
+        try:
+            csv_idx = sys.argv.index("--csv")
+            if csv_idx + 1 < len(sys.argv):
+                csv_file = sys.argv[csv_idx + 1]
+        except ValueError:
+            pass
+            
+    # 1. 設定ファイルのバリデーション（チェック）
+    if not config.validate_config(ai_model=ai_model):
+        sys.exit(1)
+        
+    # CSVモードの実行
+    if csv_file:
+        import csv
+        print(f"📂 CSVファイルから一括処理を開始します: {csv_file}")
+        if not os.path.exists(csv_file):
+            print(f"❌ エラー: CSVファイルが見つかりません。")
+            sys.exit(1)
+            
+        try:
+            with open(csv_file, "r", encoding="utf-8-sig") as f:
+                reader = csv.DictReader(f)
+                success_count = 0
+                for row in reader:
+                    keyword = row.get("keyword")
+                    theme = row.get("theme") or f"{keyword}に関するおすすめ情報"
+                    sub_keywords_str = row.get("sub_keywords", "")
+                    sub_keywords = [k.strip() for k in sub_keywords_str.replace("、", ",").split(",") if k.strip()]
+                    post_date = row.get("post_date")
+                    
+                    if not keyword:
+                        print("⚠️ 主要キーワードが未設定の行があるため、スキップします。")
+                        continue
+                        
+                    print(f"\n--- 一括予約生成処理中: テーマ『{theme}』 キーワード『{keyword}』 ---")
+                    try:
+                        generate_and_post_single_article(
+                            keyword=keyword,
+                            theme=theme,
+                            sub_keywords=sub_keywords,
+                            ai_model=ai_model,
+                            wp_status="future" if post_date else "draft",
+                            post_date=post_date
+                        )
+                        success_count += 1
+                    except Exception as e:
+                        print(f"❌ この記事の生成・投稿に失敗しました: {e}")
+                        
+                print(f"\n==================================================")
+                print(f"🎉 CSV一括処理完了: {success_count} 件成功")
+                print(f"==================================================")
+                sys.exit(0)
+        except Exception as e:
+            print(f"❌ CSV一括処理中に予期せぬエラーが発生しました: {e}")
+            sys.exit(1)
+
+    # 2. キーワードリストの読み込み
+    keywords_file = os.path.join(os.path.dirname(__file__), "keywords.json")
+    if not os.path.exists(keywords_file):
+        print(f"❌ エラー: キーワードファイル '{keywords_file}' が見つかりません。")
+        sys.exit(1)
+        
     try:
-        post_url = post_article_to_wordpress(
-            wp_url=config.WP_URL,
-            username=config.WP_USERNAME,
-            app_password=config.WP_PASSWORD,
-            title=blog_post.get("title", theme),
-            content=blog_post.get("content", ""),
-            excerpt=blog_post.get("meta_description", ""),
-            featured_media_id=featured_media_id,
-            tags=tag_ids,
-            status="draft"
-        )
-        print("==================================================")
-        print("✨ すべての処理が正常に完了しました！")
-        print(f"WordPressの管理画面にログインし、下書きを確認してください。")
-        print("==================================================")
+        with open(keywords_file, "r", encoding="utf-8") as f:
+            keyword_list = json.load(f)
     except Exception as e:
-        print(f"❌ WordPressへの投稿に失敗しました: {e}")
+        print(f"❌ エラー: キーワードファイルの読み込みに失敗しました: {e}")
+        sys.exit(1)
+        
+    if not keyword_list:
+        print("❌ エラー: キーワードリストが空です。")
+        sys.exit(1)
+        
+    # 3. 記事テーマの選定
+    if len(sys.argv) > 1:
+        try:
+            index = int(sys.argv[1])
+            selected = keyword_list[index % len(keyword_list)]
+            print(f"💡 コマンド引数より、リストの {index} 番目のテーマを執筆します。")
+        except ValueError:
+            selected = random.choice(keyword_list)
+            print("💡 ランダムなテーマを執筆します。")
+    else:
+        selected = random.choice(keyword_list)
+        print("💡 ランダムなテーマを執筆します。")
+        
+    keyword = selected.get("keyword")
+    theme = selected.get("theme")
+    sub_keywords = selected.get("sub_keywords", [])
+    
+    print(f"\n📌 今回執筆するテーマ:")
+    print(f"  - テーマ名　: {theme}")
+    print(f"  - 主要ワード: {keyword}")
+    print(f"  - 関連ワード: {', '.join(sub_keywords)}")
+    print("==================================================")
+    
+    try:
+        generate_and_post_single_article(
+            keyword=keyword,
+            theme=theme,
+            sub_keywords=sub_keywords,
+            ai_model=ai_model,
+            wp_status="draft"
+        )
+    except Exception as e:
+        print(f"❌ 記事の生成または投稿に失敗しました。\n{e}")
         sys.exit(1)
 
 if __name__ == "__main__":

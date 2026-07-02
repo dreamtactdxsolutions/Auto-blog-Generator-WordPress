@@ -27,6 +27,10 @@ UNSPLASH_ACCESS_KEY = get_setting("UNSPLASH_ACCESS_KEY")
 # オプション設定（Google Maps APIキー：観光地の写真自動取得用）
 GOOGLE_MAPS_API_KEY = get_setting("GOOGLE_MAPS_API_KEY")
 
+# オプション設定（Google Search Console 連携用）
+GOOGLE_SERVICE_ACCOUNT_JSON = get_setting("GOOGLE_SERVICE_ACCOUNT_JSON")
+SEARCH_CONSOLE_PROPERTY_URL = get_setting("SEARCH_CONSOLE_PROPERTY_URL")
+
 # 設定値が正しく入力されているかをチェックする関数
 def validate_config(ai_model: str = "gemini"):
     missing = []
@@ -66,6 +70,11 @@ def validate_config(ai_model: str = "gemini"):
         print("🗺️  Google Maps APIキー設定済み: 観光地写真の自動取得が『有効』です。")
     else:
         print("⚠️  Google Maps APIキー未設定: 観光地写真の自動取得は『無効』です。")
+
+    if GOOGLE_SERVICE_ACCOUNT_JSON and SEARCH_CONSOLE_PROPERTY_URL:
+        print("📈 Search Console 連携設定済み: 検索データに基づく自動改善が『有効』です。")
+    else:
+        print("⚠️  Search Console 連携設定未完了: 検索データに基づく自動改善は『無効』です。")
     print()
     return True
 

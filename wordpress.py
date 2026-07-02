@@ -130,11 +130,13 @@ def post_article_to_wordpress(
     excerpt: str, 
     featured_media_id: int = None, 
     tags: list = None,
-    status: str = "draft"
+    status: str = "draft",
+    date: str = None
 ) -> str:
     """
     WordPress REST APIを使用してブログ記事を投稿します。
     デフォルトでは安全のため「下書き (draft)」状態で保存されます。
+    未来の日付（ISO 8601形式）と status="future" を指定することで、予約投稿が可能です。
     """
     url = f"{wp_url.rstrip('/')}/wp-json/wp/v2/posts"
     
@@ -152,6 +154,10 @@ def post_article_to_wordpress(
     # タグIDリストが指定されている場合はセット
     if tags:
         data['tags'] = tags
+
+    # 公開日時が指定されている場合はセット（例: "2026-07-10T12:00:00"）
+    if date:
+        data['date'] = date
         
     try:
         response = requests.post(
@@ -164,7 +170,7 @@ def post_article_to_wordpress(
         if response.status_code == 201:
             post_data = response.json()
             post_url = post_data.get('link')
-            print(f"\n🎉 WordPressへの記事投稿に成功しました！ (ステータス: {status})")
+            print(f"\n🎉 WordPressへの記事投稿に成功しました！ (ステータス: {status}, 日時: {date or '即時'})")
             print(f"🔗 プレビュー/編集用URL: {post_url}\n")
             return post_url
         else:
@@ -174,6 +180,91 @@ def post_article_to_wordpress(
             
     except Exception as e:
         print(f"❌ WordPressへの接続または投稿中にエラーが発生しました: {e}")
+        raise e
+
+def get_article_content_detailed(wp_url: str, username: str, app_password: str, post_id: int) -> dict:
+    """
+    指定された記事IDのコンテンツ（タイトル、本文、抜粋、タグIDリスト、アイキャッチメディアID）を取得します。
+    """
+    url = f"{wp_url.rstrip('/')}/wp-json/wp/v2/posts/{post_id}"
+    
+    try:
+        import html
+        response = requests.get(
+            url,
+            auth=HTTPBasicAuth(username, app_password),
+            timeout=20
+        )
+        
+        if response.status_code == 200:
+            post = response.json()
+            title = post.get('title', {}).get('rendered', '')
+            title = html.unescape(title)
+            content = post.get('content', {}).get('raw', post.get('content', {}).get('rendered', ''))
+            excerpt = post.get('excerpt', {}).get('raw', post.get('excerpt', {}).get('rendered', ''))
+            excerpt = re.sub(r'<[^>]+>', '', excerpt).strip() if excerpt else ""
+            
+            return {
+                "id": post.get("id"),
+                "title": title,
+                "content": content,
+                "excerpt": html.unescape(excerpt),
+                "tags": post.get("tags", []),
+                "featured_media": post.get("featured_media")
+            }
+        else:
+            print(f"❌ 記事の取得に失敗しました (ID: {post_id}, ステータスコード: {response.status_code})")
+            return None
+    except Exception as e:
+        print(f"❌ 記事取得中にエラーが発生しました (ID: {post_id}): {e}")
+        return None
+
+def update_article_in_wordpress(
+    wp_url: str, 
+    username: str, 
+    app_password: str, 
+    post_id: int,
+    title: str = None, 
+    content: str = None, 
+    excerpt: str = None, 
+    featured_media_id: int = None, 
+    tags: list = None,
+    status: str = None
+) -> str:
+    """
+    指定された記事IDの既存投稿をWordPress REST API経由で更新（上書き）します。
+    """
+    url = f"{wp_url.rstrip('/')}/wp-json/wp/v2/posts/{post_id}"
+    
+    data = {}
+    if title is not None: data['title'] = title
+    if content is not None: data['content'] = content
+    if excerpt is not None: data['excerpt'] = excerpt
+    if status is not None: data['status'] = status
+    if featured_media_id is not None: data['featured_media'] = featured_media_id
+    if tags is not None: data['tags'] = tags
+        
+    try:
+        response = requests.post(
+            url,
+            json=data,
+            auth=HTTPBasicAuth(username, app_password),
+            timeout=30
+        )
+        
+        if response.status_code == 200:
+            post_data = response.json()
+            post_url = post_data.get('link')
+            print(f"\n🎉 WordPressの記事更新（ID: {post_id}）に成功しました！")
+            print(f"🔗 更新記事URL: {post_url}\n")
+            return post_url
+        else:
+            print(f"❌ 記事の更新に失敗しました (ステータスコード: {response.status_code})")
+            print(response.text)
+            raise Exception("WordPress REST APIの応答エラー")
+            
+    except Exception as e:
+        print(f"❌ WordPressへの接続または更新中にエラーが発生しました: {e}")
         raise e
 
 def get_existing_posts(wp_url: str, username: str, app_password: str) -> list:
