@@ -327,14 +327,16 @@
             <ul>
                 <li><a href="#intro">1. システム概要</a></li>
                 <li><a href="#workflow">2. アプリの基本的な使い方</a></li>
-                <li><a href="#custom-images">3. 優先スポット写真の登録</a></li>
-                <li><a href="#wp-setup">4. WordPress連携の設定手順</a></li>
-                <li><a href="#gemini-setup">5. Gemini APIキーの取得方法</a></li>
-                <li><a href="#claude-setup">5-2. Claude (Anthropic) APIキーの取得</a></li>
-                <li><a href="#maps-setup">6. Google Maps APIキーの取得</a></li>
-                <li><a href="#unsplash-setup">7. Unsplash APIキーの取得</a></li>
-                <li><a href="#deploy-setup">8. Streamlit Cloudへの配置設定</a></li>
-                <li><a href="#support">9. トラブルシューティング</a></li>
+                <li><a href="#sc-rewrite">3. Search Console連携と自動記事改善</a></li>
+                <li><a href="#custom-images">4. 優先スポット写真の登録</a></li>
+                <li><a href="#wp-setup">5. WordPress連携の設定手順</a></li>
+                <li><a href="#sc-setup">6. Search Console API（サービスアカウント）の設定手順</a></li>
+                <li><a href="#gemini-setup">7. Gemini APIキーの取得方法</a></li>
+                <li><a href="#claude-setup">7-2. Claude (Anthropic) APIキーの取得</a></li>
+                <li><a href="#maps-setup">8. Google Maps APIキーの取得</a></li>
+                <li><a href="#unsplash-setup">9. Unsplash APIキーの取得</a></li>
+                <li><a href="#deploy-setup">10. Streamlit Cloudへの配置設定</a></li>
+                <li><a href="#support">11. トラブルシューティング</a></li>
             </ul>
         </nav>
 
@@ -362,7 +364,7 @@
             <!-- 2. アプリの基本的な使い方 -->
             <section id="workflow">
                 <h2 class="section-title">2. アプリの基本的な使い方</h2>
-                <p>ブラウザでアプリを開き、<strong>「📝 記事生成」</strong>タブから記事を自動生成します。執筆モードには以下の2通りがあります。</p>
+                <p>ブラウザでアプリを開き、<strong>「📝 記事生成」</strong>タブから記事を自動生成します。執筆モードには以下の3通りがあります。</p>
                 
                 <img src="images/step_guide.png" alt="使い方ステップ" class="doc-image">
 
@@ -399,22 +401,65 @@
                     </li>
                 </ol>
 
+                <h3>C. 📅 CSV一括予約投稿モード（まとめて予約投稿する場合）</h3>
+                <ol class="step-list">
+                    <li class="step-item">
+                        <span class="step-num">1</span>
+                        <strong>CSVテンプレートのダウンロード</strong><br>
+                        「📥 CSVテンプレートをダウンロード」ボタンから専用のCSVテンプレートを取得します。
+                    </li>
+                    <li class="step-item">
+                        <span class="step-num">2</span>
+                        <strong>キーワードと日時の編集</strong><br>
+                        CSV内に「主要キーワード（keyword）」、「テーマ（theme）」、「関連キーワード（sub_keywords）」、および「公開予定日時（post_date：例 <code>2026-07-10 10:00:00</code>）」を公開予定日時として記入します。
+                    </li>
+                    <li class="step-item">
+                        <span class="step-num">3</span>
+                        <strong>CSVアップロードと一括実行</strong><br>
+                        編集したCSVファイルをアップロードし、「🚀 一括生成・予約投稿を開始する」ボタンを押すと、AIがバックグラウンドで記事を連続生成し、WordPressへ予約投稿（Scheduled/Future状態）として自動保存します。
+                    </li>
+                </ol>
+
                 <div class="callout callout-warning">
                     <h4>💡 記事完成後の確認方法</h4>
                     <p>記事の投稿に成功すると、完了時に<strong>「👉 WordPressの投稿（編集画面）を開く」</strong>という青いリンクが表示されます。そこをクリックすると、即座にWordPressの編集プレビュー画面へ移動し、完成した内容を確認・手直しして公開することができます。</p>
                 </div>
             </section>
 
-            <!-- 3. 優先スポット写真の登録 -->
+            <!-- 3. Search Console連携と自動記事改善 -->
+            <section id="sc-rewrite">
+                <h2 class="section-title">3. Search Console連携と自動記事改善</h2>
+                <p><strong>「📈 記事改善（Search Console）」</strong>タブでは、Google Search Consoleのパフォーマンスデータを取得し、掲載順位が低迷している（例：10〜30位前後）の過去記事を分析して、検索エンジンで上位表示されるように自動リライトを行います。</p>
+                
+                <ol class="step-list">
+                    <li class="step-item">
+                        <span class="step-num">1</span>
+                        <strong>掲載パフォーマンスの取得</strong><br>
+                        分析対象期間（日前）や最小表示回数を設定し、「📊 Search Console データを取得して改善候補を分析」ボタンをクリックします。
+                    </li>
+                    <li class="step-item">
+                        <span class="step-num">2</span>
+                        <strong>改善候補の選定と分析</strong><br>
+                        表示順位が低く改善の余地がある記事がリストアップされます。対象記事を選択すると、AIが「その記事が現在どのような検索クエリ（キーワード）で検索されているか」を表示します。
+                    </li>
+                    <li class="step-item">
+                        <span class="step-num">3</span>
+                        <strong>自動改善リライトの実行</strong><br>
+                        使用するAIモデルと保存方法（新しい下書きとして別保存、または既存記事へ直接上書き）を選択し、「🚀 自動リライト（改善）を実行する」をクリックします。AIが検索意図に答える内容を肉付けし、SEOに最適化したリライト記事を生成してWordPressに保存します。
+                    </li>
+                </ol>
+            </section>
+
+            <!-- 4. 優先スポット写真の登録 -->
             <section id="custom-images">
-                <h2 class="section-title">3. 優先スポット写真の登録（自社画像・スマホ画像対応）</h2>
+                <h2 class="section-title">4. 優先スポット写真の登録（自社画像・スマホ画像対応）</h2>
                 <p>AIが記事内に特定の観光地やお店（例：「宮古島レンタカー」など）を登場させた際、ネット上の写真ではなく、あらかじめ用意した指定写真（スタッフの実写写真など）を優先して記事内に自動挿入させる機能です。</p>
                 
                 <ol class="step-list">
                     <li class="step-item">
                         <span class="step-num">1</span>
                         <strong>「📷 スポット画像登録」タブを開く</strong><br>
-                        画面上部の2番目のタブを開きます。
+                        画面上部の3番目のタブを開きます。
                     </li>
                     <li class="step-item">
                         <span class="step-num">2</span>
@@ -429,9 +474,9 @@
                 </ol>
             </section>
 
-            <!-- 4. WordPress連携の設定手順 -->
+            <!-- 5. WordPress連携の設定手順 -->
             <section id="wp-setup">
-                <h2 class="section-title">4. WordPress連携の設定手順</h2>
+                <h2 class="section-title">5. WordPress連携の設定手順</h2>
                 <p>自動生成した記事をWordPressへ自動投稿するためには、WordPressの「アプリケーションパスワード」が必要です。一般のログインパスワードは安全のため使用できません。</p>
                 
                 <ol class="step-list">
@@ -485,9 +530,39 @@
                 </div>
             </section>
 
-            <!-- 5. Gemini APIキーの取得方法 -->
+            <!-- 6. Search Console API（サービスアカウント）の設定手順 -->
+            <section id="sc-setup">
+                <h2 class="section-title">6. Search Console API（サービスアカウント）の設定手順</h2>
+                <p>Google Search Consoleから掲載実績データを自動で取得してリライト（改善）を行うためには、システムに登録された「サービスアカウント」に対して、Google Search Console上での閲覧・編集権限（ユーザー追加）を付与する必要があります。</p>
+
+                <ol class="step-list">
+                    <li class="step-item">
+                        <span class="step-num">1</span>
+                        <strong>サービスアカウントのメールアドレスを確認</strong><br>
+                        システム（本番環境のシステム設定タブ）に設定されている以下のサービスアカウント用アドレス（メールアドレス）をコピーします。
+                        <pre><code>deploy-sa@blog-rewrite-sc-helper-501215.iam.gserviceaccount.com</code></pre>
+                    </li>
+                    <li class="step-item">
+                        <span class="step-num">2</span>
+                        <strong>Google Search Console の設定画面を開く</strong><br>
+                        普段ホームページのSearch Consoleを管理しているGoogleアカウントでログインし、左メニュー最下部にある <strong>「設定 ⚙️」</strong> ＞ <strong>「ユーザーと権限」</strong> をクリックします。
+                    </li>
+                    <li class="step-item">
+                        <span class="step-num">3</span>
+                        <strong>ユーザーの追加を実行</strong><br>
+                        画面右上にある青い <strong>「ユーザーを追加」</strong> ボタンをクリックします。メールアドレス欄にステップ1でコピーしたアドレスを貼り付け、権限を <strong>「フル」</strong> （またはオーナー）に設定して「追加」をクリックします。
+                    </li>
+                </ol>
+
+                <div class="callout callout-warning">
+                    <h4>💡 所有権がクライアント（顧客）様にある場合</h4>
+                    <p>サーチコンソールの管理権限がクライアント様にある場合は、上記ステップ1の <strong>「サービスアカウントのメールアドレス」</strong> をクライアント様に送付し、クライアント様のSearch Console側で上記の設定（ユーザー追加：権限「フル」）を行っていただくようご依頼ください。</p>
+                </div>
+            </section>
+
+            <!-- 7. Gemini APIキーの取得方法 -->
             <section id="gemini-setup">
-                <h2 class="section-title">5. Gemini APIキーの取得方法（AIの頭脳）</h2>
+                <h2 class="section-title">7. Gemini APIキーの取得方法（AIの頭脳）</h2>
                 <p>記事の文章を執筆し、各種検索を行うためのAI頭脳である「Gemini」のアクセスキーを取得します。</p>
                 
                 <ol class="step-list">
@@ -527,7 +602,7 @@
 
             <!-- 5-2. Claude (Anthropic) APIキーの取得 -->
             <section id="claude-setup">
-                <h2 class="section-title">5-2. Claude (Anthropic) APIキーの取得方法（AIの頭脳・もう一つの選択肢）</h2>
+                <h2 class="section-title">7-2. Claude (Anthropic) APIキーの取得方法（AIの頭脳・もう一つの選択肢）</h2>
                 <p>記事の執筆に高品質なAIモデル <strong>「Claude Sonnet 4.6」</strong> を使用するために必要となるAPIキーの取得手順です。Claudeは表現力豊かで自然な日本語の記事作成に優れています。</p>
                 <p>※Claudeを使用するには、アカウントへの事前チャージ（クレジットチャージ）が必要です。Geminiのような完全な無料プランはありませんのでご注意ください。</p>
 
@@ -562,7 +637,7 @@
 
             <!-- 6. Google Maps APIキーの取得 -->
             <section id="maps-setup">
-                <h2 class="section-title">6. Google Maps APIキーの取得（観光地写真用：任意）</h2>
+                <h2 class="section-title">8. Google Maps APIキーの取得（観光地写真用：任意）</h2>
                 <p>AIが記事中に地名や観光地を紹介した際、自動的にその場所の美しい写真をGoogleマップ上から取得して記事内に埋め込むために使用します。※設定しない場合は写真なしでテキストのみが作成されます。</p>
 
                 <ol class="step-list">
@@ -596,7 +671,7 @@
 
             <!-- 7. Unsplash APIキーの取得 -->
             <section id="unsplash-setup">
-                <h2 class="section-title">7. Unsplash APIキーの取得（アイキャッチ自動取得用：任意）</h2>
+                <h2 class="section-title">9. Unsplash APIキーの取得（アイキャッチ自動取得用：任意）</h2>
                 <p>自社フォルダに実写の画像素材がないとき、Unsplashという高品質フリー画像サイトからテーマに合わせた宮古島や海の写真を自動検索・ダウンロードして、タイトル加工するために使用します。※設定しない場合は、実写画像フォルダからのみランダムに選ばれます。</p>
 
                 <ol class="step-list">
@@ -620,7 +695,7 @@
 
             <!-- 8. Streamlit Cloudへの配置設定 -->
             <section id="deploy-setup">
-                <h2 class="section-title">8. Streamlit Cloudへの配置設定（デプロイとSecrets）</h2>
+                <h2 class="section-title">10. Streamlit Cloudへの配置設定（デプロイとSecrets）</h2>
                 <p>GitHubへ最新のコードをプッシュすれば自動的にStreamlit Cloud上のWebアプリも更新されますが、APIキーなどの個人情報をクラウド環境で安全に保持するため、Streamlitの「Secrets」管理画面を設定する必要があります。</p>
                 
                 <ol class="step-list">
@@ -647,7 +722,9 @@ WP_URL = "https://miyakojima-rentacar.net/article"
 WP_USERNAME = "あなたのWordPressユーザー名"
 WP_PASSWORD = "発行したアプリケーションパスワード（24桁の英字）"
 UNSPLASH_ACCESS_KEY = "UnsplashのAccessKey（設定しない場合は空欄で可）"
-GOOGLE_MAPS_API_KEY = "Google Maps APIキー（設定しない場合は空欄で可）"</code></pre>
+GOOGLE_MAPS_API_KEY = "Google Maps APIキー（設定しない場合は空欄で可）"
+SEARCH_CONSOLE_PROPERTY_URL = "https://miyakojima-rentacar.net/"
+GOOGLE_SERVICE_ACCOUNT_JSON = '{"type": "service_account", "project_id": "blog-rewrite-sc-helper-501215", ...}'</code></pre>
 
                 <div class="callout callout-info">
                     <h4>🔒 セキュリティについて</h4>
@@ -657,7 +734,7 @@ GOOGLE_MAPS_API_KEY = "Google Maps APIキー（設定しない場合は空欄で
 
             <!-- 9. トラブルシューティング -->
             <section id="support">
-                <h2 class="section-title">9. トラブルシューティング（よくある不具合と対策）</h2>
+                <h2 class="section-title">11. トラブルシューティング（よくある不具合と対策）</h2>
                 
                 <h3>❓ アプリの画面に「ImportError」や真っ赤なエラー画面が出る</h3>
                 <p><strong>対策:</strong> クラウド反映時の読み込みラグや古いキャッシュが原因です。画面右下の「Manage app」から、アプリメニューの<strong>「Reboot app」（再起動）</strong>を実行してください。最新のコードが正しく再読み込みされます。</p>
