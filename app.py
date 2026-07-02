@@ -172,50 +172,6 @@ def save_env_values(new_values):
 # タブ機能で画面を整理
 tab1, tab_improve, tab2, tab3, tab4 = st.tabs(["📝 記事生成", "📈 記事改善（Search Console）", "📷 スポット画像登録", "⚙️ システム設定", "📖 取扱説明書"])
 
-with tab3:
-    st.markdown("### ⚙️ システム連携・APIキーの設定")
-    st.caption("WordPressへの自動投稿やGoogleマップの写真取得に必要な各種キーを編集できます。保存すると `.env` ファイルが自動更新されます。")
-    
-    env_values = load_env_values()
-    
-    col_env1, col_env2 = st.columns(2)
-    with col_env1:
-        gemini_key = st.text_input("Gemini APIキー", value=env_values.get("GEMINI_API_KEY", ""), type="password", help="Gemini API (Google AI Studio) から取得したAPIキー")
-        wp_url = st.text_input("WordPress URL", value=env_values.get("WP_URL", ""), help="WordPressのトップURL（例: https://example.com/article）")
-        wp_username = st.text_input("WordPress ユーザー名", value=env_values.get("WP_USERNAME", ""))
-        wp_password = st.text_input("WordPress アプリケーションパスワード", value=env_values.get("WP_PASSWORD", ""), type="password", help="WordPressの管理画面 ＞ ユーザー ＞ プロフィール から生成できるパスワード")
-        search_console_property = st.text_input("Search Console プロパティURL", value=env_values.get("SEARCH_CONSOLE_PROPERTY_URL", ""), help="連携するサイトのURL（例: https://miyakojima-rentacar.net/ または sc-domain:miyakojima-rentacar.net）")
-    with col_env2:
-        anthropic_key = st.text_input("Claude (Anthropic) APIキー", value=env_values.get("ANTHROPIC_API_KEY", ""), type="password", help="Anthropic Consoleから取得したAPIキー")
-        unsplash_key = st.text_input("Unsplash APIキー (アイキャッチ自動取得用：任意)", value=env_values.get("UNSPLASH_ACCESS_KEY", ""), help="Unsplashの開発者用Access Key")
-        maps_key = st.text_input("Google Maps APIキー (観光地写真用：任意)", value=env_values.get("GOOGLE_MAPS_API_KEY", ""), type="password", help="Google Cloud Consoleから取得したPlaces APIが有効なAPIキー")
-        service_account_json = st.text_area("Google サービスアカウントキー (JSON)", value=env_values.get("GOOGLE_SERVICE_ACCOUNT_JSON", ""), height=150, help="Search Console APIへのアクセス権限を持つサービスアカウントのJSONキーファイルの中身をそのまま貼り付けてください。")
-        
-    if st.button("⚙️ 設定を保存する"):
-        new_env = {
-            "GEMINI_API_KEY": gemini_key,
-            "WP_URL": wp_url,
-            "WP_USERNAME": wp_username,
-            "WP_PASSWORD": wp_password,
-            "UNSPLASH_ACCESS_KEY": unsplash_key,
-            "GOOGLE_MAPS_API_KEY": maps_key,
-            "ANTHROPIC_API_KEY": anthropic_key,
-            "GOOGLE_SERVICE_ACCOUNT_JSON": service_account_json,
-            "SEARCH_CONSOLE_PROPERTY_URL": search_console_property
-        }
-        save_env_values(new_env)
-        st.success("✅ 設定情報を保存しました！システムに即時反映されます。")
-        
-        # モジュール上の設定値を直接書き換え
-        config.GEMINI_API_KEY = gemini_key
-        config.WP_URL = wp_url
-        config.WP_USERNAME = wp_username
-        config.WP_PASSWORD = wp_password
-        config.UNSPLASH_ACCESS_KEY = unsplash_key
-        config.GOOGLE_MAPS_API_KEY = maps_key
-        config.ANTHROPIC_API_KEY = anthropic_key
-        config.GOOGLE_SERVICE_ACCOUNT_JSON = service_account_json
-        config.SEARCH_CONSOLE_PROPERTY_URL = search_console_property
                         
 with tab1:
     st.markdown("### ✍️ 記事の作成モード")
