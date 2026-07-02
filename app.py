@@ -314,55 +314,6 @@ with tab_improve:
                         
                         original_post = get_article_content_detailed(cur_wp_url, cur_wp_user, cur_wp_pass, post_id)
                         
-                        if not original_post:
-                            st.error(f"❌ エラー: WordPressから記事（ID: {post_id}）を取得できませんでした。ログイン情報やURLを確認してください。")
-                        else:
-                            st.toast("🤖 AIによるリライト記事を生成中...")
-                            # 実行用のAPIキー取得
-                            active_api_key = env_values.get("GEMINI_API_KEY", "") if rew_ai_model == "gemini" else env_values.get("ANTHROPIC_API_KEY", "")
-                            
-                            try:
-                                rewrite_res = rewrite_blog_article(
-                                    api_key=active_api_key,
-                                    original_title=original_post["title"],
-                                    original_content=original_post["content"],
-                                    low_performing_queries=target_info["queries"],
-                                    ai_model=rew_ai_model
-                                )
-                                
-                                new_title = rewrite_res["title"]
-                                new_content = rewrite_res["content"]
-                                new_excerpt = rewrite_res["meta_description"]
-                                
-                                if overwrite_wp:
-                                    st.toast("📤 WordPressの既存記事を上書き更新中...")
-                                    res_url = update_article_in_wordpress(
-                                        wp_url=cur_wp_url,
-                                        username=cur_wp_user,
-                                        app_password=cur_wp_pass,
-                                        post_id=post_id,
-                                        title=new_title,
-                                        content=new_content,
-                                        excerpt=new_excerpt
-                                    )
-                                    st.success(f"🎉 記事の上書き更新に成功しました！\n👉 [更新された記事を確認する]({res_url})")
-                                else:
-                                    st.toast("📤 新しい下書き記事として保存中...")
-                                    res_url = post_article_to_wordpress(
-                                        wp_url=cur_wp_url,
-                                        username=cur_wp_user,
-                                        app_password=cur_wp_pass,
-                                        title=f"【改善版】{new_title}",
-                                        content=new_content,
-                                        excerpt=new_excerpt,
-                                        featured_media_id=original_post.get("featured_media"),
-                                        tags=original_post.get("tags"),
-                                        status="draft"
-                                    )
-                                    st.success(f"🎉 改善したリライト記事を『下書き』として保存しました！\n👉 [下書きの編集・プレビュー画面を開く]({res_url})")
-                            except Exception as e:
-                                st.error(f"❌ リライト処理中にエラーが発生しました: {e}")
-                                    
 with tab1:
     st.markdown("### ✍️ 記事の作成モード")
     create_mode = st.radio(
@@ -691,6 +642,272 @@ with tab1:
                     else:
                         st.error(f"エラー内容: {e}")
                         st.info("システム設定に入力された情報が正しいか再度確認してください。")
+
+with tab_improve:
+    st.markdown("### 📈 Search Console 連携＆自動記事改善")
+    st.caption("Google Search Consoleの掲載実績データに基づき、検索順位が低迷している（例: 10〜30位付近の）公開済み記事を自動でリライトします。狙うキーワードの検索意図を満たす情報を追加し、掲載順位を上げます。")
+    
+    # 接続確認
+    sc_json = config.GOOGLE_SERVICE_ACCOUNT_JSON
+    sc_prop = config.SEARCH_CONSOLE_PROPERTY_URL
+    
+    if not sc_json or not sc_prop:
+        st.info("⚠️ 連携するには、システム設定（⚙️タブ）で「Googleサービスアカウントキー (JSON)」および「Search Console プロパティURL」を設定してください。")
+    else:
+        st.write("#### 1. 過去30日間の掲載パフォーマンス分析")
+        col_an1, col_an2 = st.columns([1, 3])
+        with col_an1:
+            days_range = st.slider("分析対象期間（日前）", min_value=7, max_value=90, value=30)
+            min_imp = st.number_input("最小表示回数（期間中）", min_value=1, value=10)
+        with col_an2:
+            st.write("")
+            st.write("")
+            analyze_trigger = st.button("📊 Search Console データを取得して改善候補を分析")
+
+        if "sc_analysis_results" not in st.session_state:
+            st.session_state["sc_analysis_results"] = None
+
+        if analyze_trigger:
+            with st.spinner("🔍 Search Console APIに接続してデータを分析中..."):
+                from search_console import get_search_console_service, fetch_performance_data, analyze_low_performing_pages
+                service = get_search_console_service(sc_json)
+                if not service:
+                    st.error("❌ Google Search Console APIとの認証に失敗しました。サービスアカウントのJSONキーを確認してください。")
+                else:
+                    raw_data = fetch_performance_data(service, sc_prop, days=days_range)
+                    if not raw_data:
+                        st.warning("⚠️ 掲載データが見つかりませんでした。プロパティURLが正しいか確認してください（例: trailing slashを揃える、ドメインプロパティの場合は `sc-domain:example.com`）。")
+                    else:
+                        suggestions = analyze_low_performing_pages(raw_data, min_impressions=min_imp)
+                        st.session_state["sc_analysis_results"] = suggestions
+                        
+        suggestions = st.session_state["sc_analysis_results"]
+        if suggestions:
+            st.success(f"✅ 分析完了: 改善候補となる記事が {len(suggestions)} 件見つかりました。")
+            
+            # 推奨記事の選択リスト
+            options = []
+            for url, info in suggestions.items():
+                options.append(f"📍 {url} (表示: {info['impressions']}回 / 順位: {info['avg_position']}位) ➔ 狙うクエリ: {', '.join(info['queries'])}")
+                
+            selected_option = st.selectbox("リライトを実行する記事を選択してください", options)
+            
+            if selected_option:
+                # 選択されたURLとクエリの取得
+                selected_idx = options.index(selected_option)
+                target_url = list(suggestions.keys())[selected_idx]
+                target_info = suggestions[target_url]
+                
+                st.markdown("##### 📌 改善対象の記事情報")
+                col_sel1, col_sel2 = st.columns(2)
+                with col_sel1:
+                    st.write(f"**URL**: {target_url}")
+                    st.write(f"**過去{days_range}日間の表示回数**: {target_info['impressions']} 回")
+                    st.write(f"**平均表示順位**: {target_info['avg_position']} 位")
+                with col_sel2:
+                    st.write(f"**流入クエリ（狙うキーワード）**: {', '.join(target_info['queries'])}")
+                
+                st.write("---")
+                st.write("#### 2. 自動改善（リライト）の実行設定")
+                
+                col_rew1, col_rew2 = st.columns(2)
+                with col_rew1:
+                    rewrite_model = st.selectbox("使用するAIモデル (リライト用)", ["Gemini 3.5 Flash", "Claude Sonnet 4.6"], index=0, key="rew_model")
+                    rew_ai_model = "claude" if "Claude" in rewrite_model else "gemini"
+                    
+                    policy = st.radio("リライトした記事の保存方法", ["新しい下書き記事として別保存（推奨）", "既存の記事に直接上書き更新する"], index=0)
+                    overwrite_wp = True if "直接上書き" in policy else False
+                with col_rew2:
+                    st.info("💡 元記事の構成やHTML見出しの流れを維持しながら、追加キーワードで検索する読者の疑問に答えるように情報を肉付けします。")
+                
+                # リライト実行
+                if st.button("🚀 自動リライト（改善）を実行する"):
+                    # WordPress 投稿IDの抽出
+                    from search_console import extract_wp_post_id_from_url
+                    from wordpress import get_article_content_detailed, update_article_in_wordpress
+                    from generator import rewrite_blog_article
+                    
+                    post_id = extract_wp_post_id_from_url(target_url)
+                    
+                    if not post_id:
+                        st.error("❌ エラー: URLからWordPressの投稿ID（数値）を自動抽出できませんでした。手動で記事IDを確認してください。")
+                    else:
+                        st.toast("🔄 WordPressから現在の記事データを取得中...")
+                        env_values = load_env_values()
+                        cur_wp_url = env_values.get("WP_URL", "")
+                        cur_wp_user = env_values.get("WP_USERNAME", "")
+                        cur_wp_pass = env_values.get("WP_PASSWORD", "")
+                        
+                        original_post = get_article_content_detailed(cur_wp_url, cur_wp_user, cur_wp_pass, post_id)
+                        
+                        if not original_post:
+                            st.error(f"❌ エラー: WordPressから記事（ID: {post_id}）を取得できませんでした。ログイン情報やURLを確認してください。")
+                        else:
+                            st.toast("🤖 AIによるリライト記事を生成中...")
+                            # 実行用のAPIキー取得
+                            active_api_key = env_values.get("GEMINI_API_KEY", "") if rew_ai_model == "gemini" else env_values.get("ANTHROPIC_API_KEY", "")
+                            
+                            try:
+                                rewrite_res = rewrite_blog_article(
+                                    api_key=active_api_key,
+                                    original_title=original_post["title"],
+                                    original_content=original_post["content"],
+                                    low_performing_queries=target_info["queries"],
+                                    ai_model=rew_ai_model
+                                )
+                                
+                                new_title = rewrite_res["title"]
+                                new_content = rewrite_res["content"]
+                                new_excerpt = rewrite_res["meta_description"]
+                                
+                                if overwrite_wp:
+                                    st.toast("📤 WordPressの既存記事を上書き更新中...")
+                                    res_url = update_article_in_wordpress(
+                                        wp_url=cur_wp_url,
+                                        username=cur_wp_user,
+                                        app_password=cur_wp_pass,
+                                        post_id=post_id,
+                                        title=new_title,
+                                        content=new_content,
+                                        excerpt=new_excerpt
+                                    )
+                                    st.success(f"🎉 記事の上書き更新に成功しました！\n👉 [更新された記事を確認する]({res_url})")
+                                else:
+                                    st.toast("📤 新しい下書き記事として保存中...")
+                                    res_url = post_article_to_wordpress(
+                                        wp_url=cur_wp_url,
+                                        username=cur_wp_user,
+                                        app_password=cur_wp_pass,
+                                        title=f"【改善版】{new_title}",
+                                        content=new_content,
+                                        excerpt=new_excerpt,
+                                        featured_media_id=original_post.get("featured_media"),
+                                        tags=original_post.get("tags"),
+                                        status="draft"
+                                    )
+                                    st.success(f"🎉 改善したリライト記事を『下書き』として保存しました！\n👉 [下書きの編集・プレビュー画面を開く]({res_url})")
+                            except Exception as e:
+                                st.error(f"❌ リライト処理中にエラーが発生しました: {e}")
+                                    
+with tab2:
+    st.markdown("### 📷 観光地・自社店舗写真の登録・管理")
+    st.caption("AIが記事内で特定の観光地やお店（例:『宮古島レンタカー』など）を執筆した際、Googleマップの一般写真ではなく、こちらで登録した指定写真を優先して自動挿入します。スマホからも名前を指定してアップロードできます。")
+    
+    custom_spots_dir = os.path.join(os.path.dirname(__file__), "images", "custom_spots")
+    if not os.path.exists(custom_spots_dir):
+        os.makedirs(custom_spots_dir)
+        
+    # 新規登録フォーム
+    st.write("#### 🆕 新しい公式写真を登録する")
+    col_up1, col_up2 = st.columns([1, 2])
+    with col_up1:
+        target_spot_name = st.text_input("適用したいスポット・お店の正確な名前", placeholder="例：宮古島レンタカー")
+    with col_up2:
+        uploaded_file = st.file_uploader("写真を選択（スマホの写真ライブラリから選択可能）", type=["png", "jpg", "jpeg"])
+        
+    if st.button("💾 写真をこの名前で保存する"):
+        if not target_spot_name.strip():
+            st.error("❌ エラー: スポット名を入力してください。")
+        elif not uploaded_file:
+            st.error("❌ エラー: 写真ファイルを選択してください。")
+        else:
+            # 拡張子の取得
+            ext = os.path.splitext(uploaded_file.name)[1].lower()
+            if ext not in [".png", ".jpg", ".jpeg"]:
+                ext = ".jpg" # デフォルト
+            
+            # 保存処理
+            save_path = os.path.join(custom_spots_dir, f"{target_spot_name.strip()}{ext}")
+            
+            # 競合ファイルの削除 (他の拡張子があった場合)
+            for other_ext in [".png", ".jpg", ".jpeg"]:
+                other_path = os.path.join(custom_spots_dir, f"{target_spot_name.strip()}{other_ext}")
+                if os.path.exists(other_path):
+                    os.remove(other_path)
+                    
+            with open(save_path, "wb") as f:
+                f.write(uploaded_file.getbuffer())
+                
+            st.success(f"✅ スポット '{target_spot_name.strip()}' の写真を優先画像として登録しました！")
+            st.rerun()
+            
+    # 登録済み一覧の表示
+    st.write("---")
+    st.write("#### 🗂️ 現在登録されている優先写真一覧")
+    
+    if os.path.exists(custom_spots_dir):
+        files = [f for f in os.listdir(custom_spots_dir) if f.lower().endswith(('.png', '.jpg', '.jpeg'))]
+    else:
+        files = []
+        
+    if not files:
+        st.info("現在登録されている優先写真はありません。")
+    else:
+        # グリッド状（3列）で画像と削除ボタンを表示
+        cols = st.columns(3)
+        from PIL import Image
+        for i, filename in enumerate(sorted(files)):
+            col = cols[i % 3]
+            spot_name = os.path.splitext(filename)[0]
+            img_path = os.path.join(custom_spots_dir, filename)
+            
+            with col:
+                st.write(f"**📍 {spot_name}**")
+                try:
+                    img = Image.open(img_path)
+                    st.image(img, use_container_width=True)
+                except Exception as e:
+                    st.error("画像の読み込みに失敗しました")
+                    
+                if st.button(f"🗑️ 削除", key=f"del_{spot_name}"):
+                    os.remove(img_path)
+                    st.success(f"'{spot_name}' の写真を削除しました。")
+                    st.rerun()
+
+with tab3:
+    st.markdown("### ⚙️ システム連携・APIキーの設定")
+    st.caption("WordPressへの自動投稿やGoogleマップの写真取得に必要な各種キーを編集できます。保存すると `.env` ファイルが自動更新されます。")
+    
+    env_values = load_env_values()
+    
+    col_env1, col_env2 = st.columns(2)
+    with col_env1:
+        gemini_key = st.text_input("Gemini APIキー", value=env_values.get("GEMINI_API_KEY", ""), type="password", help="Gemini API (Google AI Studio) から取得したAPIキー")
+        wp_url = st.text_input("WordPress URL", value=env_values.get("WP_URL", ""), help="WordPressのトップURL（例: https://example.com/article）")
+        wp_username = st.text_input("WordPress ユーザー名", value=env_values.get("WP_USERNAME", ""))
+        wp_password = st.text_input("WordPress アプリケーションパスワード", value=env_values.get("WP_PASSWORD", ""), type="password", help="WordPressの管理画面 ＞ ユーザー ＞ プロフィール から生成できるパスワード")
+        search_console_property = st.text_input("Search Console プロパティURL", value=env_values.get("SEARCH_CONSOLE_PROPERTY_URL", ""), help="連携するサイトのURL（例: https://miyakojima-rentacar.net/ または sc-domain:miyakojima-rentacar.net）")
+    with col_env2:
+        anthropic_key = st.text_input("Claude (Anthropic) APIキー", value=env_values.get("ANTHROPIC_API_KEY", ""), type="password", help="Anthropic Consoleから取得したAPIキー")
+        unsplash_key = st.text_input("Unsplash APIキー (アイキャッチ自動取得用：任意)", value=env_values.get("UNSPLASH_ACCESS_KEY", ""), help="Unsplashの開発者用Access Key")
+        maps_key = st.text_input("Google Maps APIキー (観光地写真用：任意)", value=env_values.get("GOOGLE_MAPS_API_KEY", ""), type="password", help="Google Cloud Consoleから取得したPlaces APIが有効なAPIキー")
+        service_account_json = st.text_area("Google サービスアカウントキー (JSON)", value=env_values.get("GOOGLE_SERVICE_ACCOUNT_JSON", ""), height=150, help="Search Console APIへのアクセス権限を持つサービスアカウントのJSONキーファイルの中身をそのまま貼り付けてください。")
+        
+    if st.button("⚙️ 設定を保存する"):
+        new_env = {
+            "GEMINI_API_KEY": gemini_key,
+            "WP_URL": wp_url,
+            "WP_USERNAME": wp_username,
+            "WP_PASSWORD": wp_password,
+            "UNSPLASH_ACCESS_KEY": unsplash_key,
+            "GOOGLE_MAPS_API_KEY": maps_key,
+            "ANTHROPIC_API_KEY": anthropic_key,
+            "GOOGLE_SERVICE_ACCOUNT_JSON": service_account_json,
+            "SEARCH_CONSOLE_PROPERTY_URL": search_console_property
+        }
+        save_env_values(new_env)
+        st.success("✅ 設定情報を保存しました！システムに即時反映されます。")
+        
+        # モジュール上の設定値を直接書き換え
+        config.GEMINI_API_KEY = gemini_key
+        config.WP_URL = wp_url
+        config.WP_USERNAME = wp_username
+        config.WP_PASSWORD = wp_password
+        config.UNSPLASH_ACCESS_KEY = unsplash_key
+        config.GOOGLE_MAPS_API_KEY = maps_key
+        config.ANTHROPIC_API_KEY = anthropic_key
+        config.GOOGLE_SERVICE_ACCOUNT_JSON = service_account_json
+        config.SEARCH_CONSOLE_PROPERTY_URL = search_console_property
 
 with tab4:
     st.markdown("### 📖 取扱説明書・設定ガイド")
