@@ -751,7 +751,16 @@ with tab3:
         anthropic_key = st.text_input("Claude (Anthropic) APIキー", value=env_values.get("ANTHROPIC_API_KEY", ""), type="password", help="Anthropic Consoleから取得したAPIキー")
         unsplash_key = st.text_input("Unsplash APIキー (アイキャッチ自動取得用：任意)", value=env_values.get("UNSPLASH_ACCESS_KEY", ""), help="Unsplashの開発者用Access Key")
         maps_key = st.text_input("Google Maps APIキー (観光地写真用：任意)", value=env_values.get("GOOGLE_MAPS_API_KEY", ""), type="password", help="Google Cloud Consoleから取得したPlaces APIが有効なAPIキー")
-        service_account_json = st.text_area("Google サービスアカウントキー (JSON)", value=env_values.get("GOOGLE_SERVICE_ACCOUNT_JSON", ""), height=150, help="Search Console APIへのアクセス権限を持つサービスアカウントのJSONキーファイルの中身をそのまま貼り付けてください。")
+        raw_sa_json = env_values.get("GOOGLE_SERVICE_ACCOUNT_JSON", "")
+        # もし辞書オブジェクト（Secretsからテーブル形式でロードされた場合など）であれば、JSON文字列にシリアライズします
+        if isinstance(raw_sa_json, dict) or (not isinstance(raw_sa_json, str) and hasattr(raw_sa_json, "get")):
+            import json
+            import copy
+            try:
+                raw_sa_json = json.dumps(dict(copy.deepcopy(raw_sa_json)), indent=2, ensure_ascii=False)
+            except Exception:
+                pass
+        service_account_json = st.text_area("Google サービスアカウントキー (JSON)", value=str(raw_sa_json), height=150, help="Search Console APIへのアクセス権限を持つサービスアカウントのJSONキーファイルの中身をそのまま貼り付けてください。")
         
     if st.button("⚙️ 設定を保存する"):
         new_env = {
