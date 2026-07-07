@@ -560,120 +560,123 @@ with tab_improve:
                         suggestions = analyze_low_performing_pages(raw_data, min_impressions=min_imp)
                         st.session_state["sc_analysis_results"] = suggestions
                         
+        # 動的な分析結果・リライトUIを固定コンテナの中にカプセル化（タブ崩れ防止）
+        analysis_results_container = st.container()
+        
         suggestions = st.session_state["sc_analysis_results"]
         if suggestions:
-            st.success(f"✅ 分析完了: 改善候補となる記事が {len(suggestions)} 件見つかりました。")
-            
-            # 推奨記事の選択リスト
-            options = []
-            for url, info in suggestions.items():
-                options.append(f"📍 {url} (表示: {info['impressions']}回 / 順位: {info['avg_position']}位) ➔ 狙うクエリ: {', '.join(info['queries'])}")
+            with analysis_results_container:
+                st.success(f"✅ 分析完了: 改善候補となる記事が {len(suggestions)} 件見つかりました。")
                 
-            selected_option = st.selectbox("リライトを実行する記事を選択してください", options)
-            
-            if selected_option:
-                # 選択されたURLとクエリの取得
-                selected_idx = options.index(selected_option)
-                target_url = list(suggestions.keys())[selected_idx]
-                target_info = suggestions[target_url]
-                
-                st.markdown("##### 📌 改善対象の記事情報")
-                col_sel1, col_sel2 = st.columns(2)
-                with col_sel1:
-                    st.write(f"**URL**: {target_url}")
-                    st.write(f"**過去{days_range}日間の表示回数**: {target_info['impressions']} 回")
-                    st.write(f"**平均表示順位**: {target_info['avg_position']} 位")
-                with col_sel2:
-                    st.write(f"**流入クエリ（狙うキーワード）**: {', '.join(target_info['queries'])}")
-                
-                st.write("---")
-                st.write("#### 2. 自動改善（リライト）の実行設定")
-                
-                col_rew1, col_rew2 = st.columns(2)
-                with col_rew1:
-                    rewrite_model = st.selectbox("使用するAIモデル (リライト用)", ["Gemini 3.5 Flash", "Claude Sonnet 4.6"], index=0, key="rew_model")
-                    rew_ai_model = "claude" if "Claude" in rewrite_model else "gemini"
+                # 推奨記事の選択リスト
+                options = []
+                for url, info in suggestions.items():
+                    options.append(f"📍 {url} (表示: {info['impressions']}回 / 順位: {info['avg_position']}位) ➔ 狙うクエリ: {', '.join(info['queries'])}")
                     
-                    policy = st.radio("リライトした記事の保存方法", ["新しい下書き記事として別保存（推奨）", "既存の記事に直接上書き更新する"], index=0)
-                    overwrite_wp = True if "直接上書き" in policy else False
-                with col_rew2:
-                    st.info("💡 元記事の構成やHTML見出しの流れを維持しながら、追加キーワードで検索する読者の疑問に答えるように情報を肉付けします。")
+                selected_option = st.selectbox("リライトを実行する記事を選択してください", options)
                 
-                # リライト実行
-                if st.button("🚀 自動リライト（改善）を実行する"):
-                    # WordPress 投稿IDの抽出
-                    from search_console import extract_wp_post_id_from_url
-                    from wordpress import get_article_content_detailed, update_article_in_wordpress, post_article_to_wordpress
-                    from generator import rewrite_blog_article
+                if selected_option:
+                    # 選択されたURLとクエリの取得
+                    selected_idx = options.index(selected_option)
+                    target_url = list(suggestions.keys())[selected_idx]
+                    target_info = suggestions[target_url]
                     
-                    post_id = extract_wp_post_id_from_url(target_url)
+                    st.markdown("##### 📌 改善対象の記事情報")
+                    col_sel1, col_sel2 = st.columns(2)
+                    with col_sel1:
+                        st.write(f"**URL**: {target_url}")
+                        st.write(f"**過去{days_range}日間の表示回数**: {target_info['impressions']} 回")
+                        st.write(f"**平均表示順位**: {target_info['avg_position']} 位")
+                    with col_sel2:
+                        st.write(f"**流入クエリ（狙うキーワード）**: {', '.join(target_info['queries'])}")
                     
-                    if not post_id:
-                        st.error("❌ エラー: URLからWordPressの投稿ID（数値）を自動抽出できませんでした。手動で記事IDを確認してください。")
-                    else:
-                        # st.toastのバグによるタブレイアウト崩壊を防ぐため、プレースホルダーでステータスを表示
-                        status_area = st.empty()
-                        status_area.info("🔄 WordPressから現在の記事データを取得中...")
+                    st.write("---")
+                    st.write("#### 2. 自動改善（リライト）の実行設定")
+                    
+                    col_rew1, col_rew2 = st.columns(2)
+                    with col_rew1:
+                        rewrite_model = st.selectbox("使用するAIモデル (リライト用)", ["Gemini 3.5 Flash", "Claude Sonnet 4.6"], index=0, key="rew_model")
+                        rew_ai_model = "claude" if "Claude" in rewrite_model else "gemini"
                         
-                        env_values = load_env_values()
-                        cur_wp_url = env_values.get("WP_URL", "")
-                        cur_wp_user = env_values.get("WP_USERNAME", "")
-                        cur_wp_pass = env_values.get("WP_PASSWORD", "")
+                        policy = st.radio("リライトした記事の保存方法", ["新しい下書き記事として別保存（推奨）", "既存の記事に直接上書き更新する"], index=0)
+                        overwrite_wp = True if "直接上書き" in policy else False
+                    with col_rew2:
+                        st.info("💡 元記事の構成やHTML見出しの流れを維持しながら、追加キーワードで検索する読者の疑問に答えるように情報を肉付けします。")
+                    
+                    # リライト実行
+                    if st.button("🚀 自動リライト（改善）を実行する"):
+                        # WordPress 投稿ID of url
+                        from search_console import extract_wp_post_id_from_url
+                        from wordpress import get_article_content_detailed, update_article_in_wordpress, post_article_to_wordpress
+                        from generator import rewrite_blog_article
                         
-                        original_post = get_article_content_detailed(cur_wp_url, cur_wp_user, cur_wp_pass, post_id)
+                        post_id = extract_wp_post_id_from_url(target_url)
                         
-                        if not original_post:
-                            status_area.empty()
-                            st.error(f"❌ エラー: WordPressから記事（ID: {post_id}）を取得できませんでした。ログイン情報やURLを確認してください。")
+                        if not post_id:
+                            st.error("❌ エラー: URLからWordPressの投稿ID（数値）を自動抽出できませんでした。手動で記事IDを確認してください。")
                         else:
-                            status_area.info("🤖 AIによるリライト記事を生成中...")
-                            # 実行用のAPIキー取得
-                            active_api_key = env_values.get("GEMINI_API_KEY", "") if rew_ai_model == "gemini" else env_values.get("ANTHROPIC_API_KEY", "")
+                            # status placeholder
+                            status_area = st.empty()
+                            status_area.info("🔄 WordPressから現在の記事データを取得中...")
                             
-                            try:
-                                rewrite_res = rewrite_blog_article(
-                                    api_key=active_api_key,
-                                    original_title=original_post["title"],
-                                    original_content=original_post["content"],
-                                    low_performing_queries=target_info["queries"],
-                                    ai_model=rew_ai_model
-                                )
-                                
-                                new_title = rewrite_res["title"]
-                                new_content = rewrite_res["content"]
-                                new_excerpt = rewrite_res["meta_description"]
-                                
-                                if overwrite_wp:
-                                    status_area.info("📤 WordPressの既存記事を上書き更新中...")
-                                    res_url = update_article_in_wordpress(
-                                        wp_url=cur_wp_url,
-                                        username=cur_wp_user,
-                                        app_password=cur_wp_pass,
-                                        post_id=post_id,
-                                        title=new_title,
-                                        content=new_content,
-                                        excerpt=new_excerpt
-                                    )
-                                    status_area.empty()
-                                    st.success(f"🎉 記事の上書き更新に成功しました！\n👉 [更新された記事を確認する]({res_url})")
-                                else:
-                                    status_area.info("📤 新しい下書き記事として保存中...")
-                                    res_url = post_article_to_wordpress(
-                                        wp_url=cur_wp_url,
-                                        username=cur_wp_user,
-                                        app_password=cur_wp_pass,
-                                        title=f"【改善版】{new_title}",
-                                        content=new_content,
-                                        excerpt=new_excerpt,
-                                        featured_media_id=original_post.get("featured_media"),
-                                        tags=original_post.get("tags"),
-                                        status="draft"
-                                    )
-                                    status_area.empty()
-                                    st.success(f"🎉 改善したリライト記事を『下書き』として保存しました！\n👉 [下書きの編集・プレビュー画面を開く]({res_url})")
-                            except Exception as e:
+                            env_values = load_env_values()
+                            cur_wp_url = env_values.get("WP_URL", "")
+                            cur_wp_user = env_values.get("WP_USERNAME", "")
+                            cur_wp_pass = env_values.get("WP_PASSWORD", "")
+                            
+                            original_post = get_article_content_detailed(cur_wp_url, cur_wp_user, cur_wp_pass, post_id)
+                            
+                            if not original_post:
                                 status_area.empty()
-                                st.error(f"❌ リライト処理中にエラーが発生しました: {e}")
+                                st.error(f"❌ エラー: WordPressから記事（ID: {post_id}）を取得できませんでした。ログイン情報やURLを確認してください。")
+                            else:
+                                status_area.info("🤖 AIによるリライト記事を生成中...")
+                                active_api_key = env_values.get("GEMINI_API_KEY", "") if rew_ai_model == "gemini" else env_values.get("ANTHROPIC_API_KEY", "")
+                                
+                                try:
+                                    rewrite_res = rewrite_blog_article(
+                                        api_key=active_api_key,
+                                        original_title=original_post["title"],
+                                        original_content=original_post["content"],
+                                        low_performing_queries=target_info["queries"],
+                                        ai_model=rew_ai_model
+                                    )
+                                    
+                                    new_title = rewrite_res["title"]
+                                    new_content = rewrite_res["content"]
+                                    new_excerpt = rewrite_res["meta_description"]
+                                    
+                                    if overwrite_wp:
+                                        status_area.info("📤 WordPressの既存記事を上書き更新中...")
+                                        res_url = update_article_in_wordpress(
+                                            wp_url=cur_wp_url,
+                                            username=cur_wp_user,
+                                            app_password=cur_wp_pass,
+                                            post_id=post_id,
+                                            title=new_title,
+                                            content=new_content,
+                                            excerpt=new_excerpt
+                                        )
+                                        status_area.empty()
+                                        st.success(f"🎉 記事の上書き更新に成功しました！\n👉 [更新された記事を確認する]({res_url})")
+                                    else:
+                                        status_area.info("📤 新しい下書き記事として保存中...")
+                                        res_url = post_article_to_wordpress(
+                                            wp_url=cur_wp_url,
+                                            username=cur_wp_user,
+                                            app_password=cur_wp_pass,
+                                            title=f"【改善版】{new_title}",
+                                            content=new_content,
+                                            excerpt=new_excerpt,
+                                            featured_media_id=original_post.get("featured_media"),
+                                            tags=original_post.get("tags"),
+                                            status="draft"
+                                        )
+                                        status_area.empty()
+                                        st.success(f"🎉 改善したリライト記事を『下書き』として保存しました！\n👉 [下書きの編集・プレビュー画面を開く]({res_url})")
+                                except Exception as e:
+                                    status_area.empty()
+                                    st.error(f"❌ リライト処理中にエラーが発生しました: {e}")
                                     
 with tab2:
     st.markdown("### 📷 観光地・自社店舗写真の登録・管理")
