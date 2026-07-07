@@ -27,7 +27,7 @@ def get_search_console_service(service_account_json_val):
                     info[key_name] = service_account_json_val[key_name]
             
             if "private_key" in info and isinstance(info["private_key"], str):
-                info["private_key"] = info["private_key"].replace("\\n", "\n")
+                info["private_key"] = info["private_key"].replace("\r\n", "\n").replace("\r", "\n").replace("\\n", "\n")
             credentials = service_account.Credentials.from_service_account_info(info)
         # JSON文字列（またはPythonの辞書文字列表記）の場合
         elif isinstance(service_account_json_val, str) and service_account_json_val.strip().startswith("{"):
@@ -40,7 +40,7 @@ def get_search_console_service(service_account_json_val):
                 info = json.loads(val_str)
                 
             if "private_key" in info and isinstance(info["private_key"], str):
-                info["private_key"] = info["private_key"].replace("\\n", "\n")
+                info["private_key"] = info["private_key"].replace("\r\n", "\n").replace("\r", "\n").replace("\\n", "\n")
             credentials = service_account.Credentials.from_service_account_info(info)
         # ファイルパスの場合
         else:
