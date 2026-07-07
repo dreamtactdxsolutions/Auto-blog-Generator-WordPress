@@ -113,7 +113,10 @@ def load_env_values():
         for k in keys:
             if k in st.secrets:
                 values[k] = st.secrets[k]
-    # 2. ローカル of .env ファイルがあれば上書きします
+    except Exception:
+        pass
+        
+    # 2. ローカルの .env ファイルがあれば上書きします
     if os.path.exists(env_path):
         with open(env_path, "r", encoding="utf-8") as f:
             for line in f:
