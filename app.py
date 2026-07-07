@@ -594,7 +594,7 @@ with tab_improve:
                     st.write("#### 2. 自動改善（リライト）の実行設定")
                     st.info("💡 元記事の構成やHTML見出しの流れを維持しながら、追加キーワードで検索する読者の疑問に答えるように情報を肉付けします。")
                     
-                    rewrite_model = st.selectbox("使用するAIモデル (リライト用)", ["Gemini 3.5 Flash", "Claude Sonnet 4.6"], index=0, key="rew_model")
+                    rewrite_model = st.selectbox("使用するAIモデル (リライト用)", ["Gemini 3.5 Flash", "Claude Sonnet 4.6"], index=0)
                     rew_ai_model = "claude" if "Claude" in rewrite_model else "gemini"
                     
                     policy = st.radio("リライトした記事の保存方法", ["新しい下書き記事として別保存（推奨）", "既存の記事に直接上書き更新する"], index=0)
