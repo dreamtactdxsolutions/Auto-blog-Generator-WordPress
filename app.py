@@ -186,8 +186,8 @@ menu = st.sidebar.radio(
     "機能を選択してください",
     [
         "📝 新規記事生成",
-        "📈 記事改善（Search Console）",
         "📷 スポット画像登録",
+        "📈 記事改善（Search Console）",
         "⚙️ システム設定",
         "📖 取扱説明書"
     ]
