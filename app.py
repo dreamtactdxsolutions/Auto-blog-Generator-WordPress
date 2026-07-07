@@ -180,11 +180,20 @@ def save_env_values(new_values):
     with open(env_path, "w", encoding="utf-8") as f:
         f.writelines(lines)
 
-# タブ機能で画面を整理
-tab1, tab_improve, tab2, tab3, tab4 = st.tabs(["📝 記事生成", "📈 記事改善（Search Console）", "📷 スポット画像登録", "⚙️ システム設定", "📖 取扱説明書"])
+# サイドバーによる機能切り替え（st.tabsのバグによるレイアウト崩壊を100%防止）
+st.sidebar.title("🏝️ 操作メニュー")
+menu = st.sidebar.radio(
+    "機能を選択してください",
+    [
+        "📝 新規記事生成",
+        "📈 記事改善（Search Console）",
+        "📷 スポット画像登録",
+        "⚙️ システム設定",
+        "📖 取扱説明書"
+    ]
+)
 
-                        
-with tab1:
+if menu == "📝 新規記事生成":
     st.markdown("### ✍️ 記事の作成モード")
     create_mode = st.radio(
         "記事の作成方法を選択してください",
@@ -513,7 +522,7 @@ with tab1:
                         st.error(f"エラー内容: {e}")
                         st.info("システム設定に入力された情報が正しいか再度確認してください。")
 
-with tab_improve:
+if menu == "📈 記事改善（Search Console）":
     st.markdown("### 📈 Search Console 連携＆自動記事改善")
     st.caption("Google Search Consoleの掲載実績データに基づき、検索順位が低迷している（例: 10〜30位付近の）公開済み記事を自動でリライトします。狙うキーワードの検索意図を満たす情報を追加し、掲載順位を上げます。")
     
@@ -675,7 +684,7 @@ with tab_improve:
                                     status_area.empty()
                                     st.error(f"❌ リライト処理中にエラーが発生しました: {e}")
                                     
-with tab2:
+if menu == "📷 スポット画像登録":
     st.markdown("### 📷 観光地・自社店舗写真の登録・管理")
     st.caption("AIが記事内で特定の観光地やお店（例:『宮古島レンタカー』など）を執筆した際、Googleマップの一般写真ではなく、こちらで登録した指定写真を優先して自動挿入します。スマホからも名前を指定してアップロードできます。")
     
@@ -750,7 +759,7 @@ with tab2:
                     st.success(f"'{spot_name}' の写真を削除しました。")
                     st.rerun()
 
-with tab3:
+if menu == "⚙️ システム設定":
     st.markdown("### ⚙️ システム連携・APIキーの設定")
     st.caption("WordPressへの自動投稿やGoogleマップの写真取得に必要な各種キーを編集できます。保存すると `.env` ファイルが自動更新されます。")
     
@@ -814,7 +823,7 @@ with tab3:
         config.GOOGLE_SERVICE_ACCOUNT_JSON = service_account_json
         config.SEARCH_CONSOLE_PROPERTY_URL = search_console_property
 
-with tab4:
+if menu == "📖 取扱説明書":
     st.markdown("### 📖 取扱説明書・設定ガイド")
     st.caption("アプリの使い方や、WordPress・各種API的連携手順、本番デプロイ時の注意点を解説しています。")
     
