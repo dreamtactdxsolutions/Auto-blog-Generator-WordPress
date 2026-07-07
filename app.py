@@ -540,9 +540,26 @@ with tab_improve:
         if analyze_trigger:
             with st.spinner("🔍 Search Console APIに接続してデータを分析中..."):
                 from search_console import get_search_console_service, fetch_performance_data, analyze_low_performing_pages
+                # デバッグ用のメタデータ抽出
+                debug_info = "解析不能"
+                try:
+                    if isinstance(sc_json, dict) or (not isinstance(sc_json, str) and hasattr(sc_json, "get")):
+                        debug_info = f"【辞書/テーブル型】 Project: {sc_json.get('project_id')} / KeyID: {sc_json.get('private_key_id')} / 鍵文字数: {len(sc_json.get('private_key', '')) if sc_json.get('private_key') else 0}"
+                    elif isinstance(sc_json, str):
+                        val_str = sc_json.strip()
+                        if val_str.startswith("{"):
+                            import ast
+                            import json
+                            info = ast.literal_eval(val_str) if "'" in val_str else json.loads(val_str)
+                            debug_info = f"【JSON文字列型】 Project: {info.get('project_id')} / KeyID: {info.get('private_key_id')} / 鍵文字数: {len(info.get('private_key', '')) if info.get('private_key') else 0}"
+                        else:
+                            debug_info = f"【ファイルパス型】 Path: {sc_json}"
+                except Exception as de:
+                    debug_info = f"メタデータ抽出エラー: {de}"
+
                 service, err_msg = get_search_console_service(sc_json)
                 if not service:
-                    st.error(f"❌ Google Search Console APIとの認証に失敗しました。サービスアカウントのJSONキーを確認してください。 (エラー詳細: {err_msg})")
+                    st.error(f"❌ Google Search Console APIとの認証に失敗しました。サービスアカウントのJSONキーを確認してください。\n\n(エラー詳細: {err_msg})\n\n(現在読み込み中のキー情報: {debug_info})")
                 else:
                     raw_data = fetch_performance_data(service, sc_prop, days=days_range)
                     if not raw_data:
