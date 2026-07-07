@@ -6,9 +6,10 @@ from googleapiclient.discovery import build
 def get_search_console_service(service_account_json_str: str):
     """
     サービスアカウントJSON文字列またはファイルパスから認証情報を作成し、Search Consoleサービスオブジェクトを返します。
+    戻り値: (service, error_message)
     """
     if not service_account_json_str:
-        return None
+        return None, "サービスアカウントのJSONキーが空です。"
     try:
         # JSON文字列かファイルパスかを判定
         if service_account_json_str.strip().startswith("{"):
@@ -21,10 +22,11 @@ def get_search_console_service(service_account_json_str: str):
             
         scoped_credentials = credentials.with_scopes(['https://www.googleapis.com/auth/webmasters.readonly'])
         service = build('webmasters', 'v3', credentials=scoped_credentials)
-        return service
+        return service, None
     except Exception as e:
-        print(f"❌ Search Console 認証情報作成中にエラーが発生しました: {e}")
-        return None
+        err_msg = str(e)
+        print(f"❌ Search Console 認証情報作成中にエラーが発生しました: {err_msg}")
+        return None, err_msg
 
 def fetch_performance_data(service, property_url: str, days: int = 30) -> list:
     """

@@ -544,9 +544,9 @@ with tab_improve:
         if analyze_trigger:
             with st.spinner("🔍 Search Console APIに接続してデータを分析中..."):
                 from search_console import get_search_console_service, fetch_performance_data, analyze_low_performing_pages
-                service = get_search_console_service(sc_json)
+                service, err_msg = get_search_console_service(sc_json)
                 if not service:
-                    st.error("❌ Google Search Console APIとの認証に失敗しました。サービスアカウントのJSONキーを確認してください。")
+                    st.error(f"❌ Google Search Console APIとの認証に失敗しました。サービスアカウントのJSONキーを確認してください。 (エラー詳細: {err_msg})")
                 else:
                     raw_data = fetch_performance_data(service, sc_prop, days=days_range)
                     if not raw_data:
