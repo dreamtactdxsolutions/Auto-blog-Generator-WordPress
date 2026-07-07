@@ -517,11 +517,20 @@ with tab_improve:
     st.markdown("### 📈 Search Console 連携＆自動記事改善")
     st.caption("Google Search Consoleの掲載実績データに基づき、検索順位が低迷している（例: 10〜30位付近の）公開済み記事を自動でリライトします。狙うキーワードの検索意図を満たす情報を追加し、掲載順位を上げます。")
     
-    # 接続確認
-    sc_json = config.GOOGLE_SERVICE_ACCOUNT_JSON
+    # 接続確認 - st.secretsから直接読み取り、途中の加工処理による文字崩れを完全に防止
+    sc_json_raw = None
+    try:
+        import streamlit as st_secrets_reader
+        if "GOOGLE_SERVICE_ACCOUNT_JSON" in st_secrets_reader.secrets:
+            sc_json_raw = st_secrets_reader.secrets["GOOGLE_SERVICE_ACCOUNT_JSON"]
+    except Exception:
+        pass
+    if not sc_json_raw:
+        sc_json_raw = config.GOOGLE_SERVICE_ACCOUNT_JSON
+    
     sc_prop = config.SEARCH_CONSOLE_PROPERTY_URL
     
-    if not sc_json or not sc_prop:
+    if not sc_json_raw or not sc_prop:
         st.info("⚠️ 連携するには、システム設定（⚙️タブ）で「Googleサービスアカウントキー (JSON)」および「Search Console プロパティURL」を設定してください。")
     else:
         st.write("#### 1. 過去30日間の掲載パフォーマンス分析")
@@ -543,21 +552,16 @@ with tab_improve:
                 # デバッグ用のメタデータ抽出
                 debug_info = "解析不能"
                 try:
-                    if isinstance(sc_json, dict) or (not isinstance(sc_json, str) and hasattr(sc_json, "get")):
-                        debug_info = f"【辞書/テーブル型】 Project: {sc_json.get('project_id')} / KeyID: {sc_json.get('private_key_id')} / 鍵文字数: {len(sc_json.get('private_key', '')) if sc_json.get('private_key') else 0}"
-                    elif isinstance(sc_json, str):
-                        val_str = sc_json.strip()
-                        if val_str.startswith("{"):
-                            import ast
-                            import json
-                            info = ast.literal_eval(val_str) if "'" in val_str else json.loads(val_str)
-                            debug_info = f"【JSON文字列型】 Project: {info.get('project_id')} / KeyID: {info.get('private_key_id')} / 鍵文字数: {len(info.get('private_key', '')) if info.get('private_key') else 0}"
-                        else:
-                            debug_info = f"【ファイルパス型】 Path: {sc_json}"
+                    data_type = type(sc_json_raw).__name__
+                    if isinstance(sc_json_raw, dict) or (not isinstance(sc_json_raw, str) and hasattr(sc_json_raw, "get")):
+                        pk = sc_json_raw.get('private_key', '')
+                        debug_info = f"【{data_type}型・直接読取】 Project: {sc_json_raw.get('project_id')} / KeyID: {sc_json_raw.get('private_key_id')} / 鍵文字数: {len(pk) if pk else 0}"
+                    elif isinstance(sc_json_raw, str):
+                        debug_info = f"【{data_type}型】 先頭20文字: {repr(sc_json_raw[:20])}"
                 except Exception as de:
                     debug_info = f"メタデータ抽出エラー: {de}"
 
-                service, err_msg = get_search_console_service(sc_json)
+                service, err_msg = get_search_console_service(sc_json_raw)
                 if not service:
                     st.error(f"❌ Google Search Console APIとの認証に失敗しました。サービスアカウントのJSONキーを確認してください。\n\n(エラー詳細: {err_msg})\n\n(現在読み込み中のキー情報: {debug_info})")
                 else:
