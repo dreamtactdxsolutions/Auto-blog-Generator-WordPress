@@ -603,7 +603,7 @@ with tab_improve:
                 if st.button("🚀 自動リライト（改善）を実行する"):
                     # WordPress 投稿IDの抽出
                     from search_console import extract_wp_post_id_from_url
-                    from wordpress import get_article_content_detailed, update_article_in_wordpress
+                    from wordpress import get_article_content_detailed, update_article_in_wordpress, post_article_to_wordpress
                     from generator import rewrite_blog_article
                     
                     post_id = extract_wp_post_id_from_url(target_url)
@@ -611,7 +611,10 @@ with tab_improve:
                     if not post_id:
                         st.error("❌ エラー: URLからWordPressの投稿ID（数値）を自動抽出できませんでした。手動で記事IDを確認してください。")
                     else:
-                        st.toast("🔄 WordPressから現在の記事データを取得中...")
+                        # st.toastのバグによるタブレイアウト崩壊を防ぐため、プレースホルダーでステータスを表示
+                        status_area = st.empty()
+                        status_area.info("🔄 WordPressから現在の記事データを取得中...")
+                        
                         env_values = load_env_values()
                         cur_wp_url = env_values.get("WP_URL", "")
                         cur_wp_user = env_values.get("WP_USERNAME", "")
@@ -620,9 +623,10 @@ with tab_improve:
                         original_post = get_article_content_detailed(cur_wp_url, cur_wp_user, cur_wp_pass, post_id)
                         
                         if not original_post:
+                            status_area.empty()
                             st.error(f"❌ エラー: WordPressから記事（ID: {post_id}）を取得できませんでした。ログイン情報やURLを確認してください。")
                         else:
-                            st.toast("🤖 AIによるリライト記事を生成中...")
+                            status_area.info("🤖 AIによるリライト記事を生成中...")
                             # 実行用のAPIキー取得
                             active_api_key = env_values.get("GEMINI_API_KEY", "") if rew_ai_model == "gemini" else env_values.get("ANTHROPIC_API_KEY", "")
                             
@@ -640,7 +644,7 @@ with tab_improve:
                                 new_excerpt = rewrite_res["meta_description"]
                                 
                                 if overwrite_wp:
-                                    st.toast("📤 WordPressの既存記事を上書き更新中...")
+                                    status_area.info("📤 WordPressの既存記事を上書き更新中...")
                                     res_url = update_article_in_wordpress(
                                         wp_url=cur_wp_url,
                                         username=cur_wp_user,
@@ -650,9 +654,10 @@ with tab_improve:
                                         content=new_content,
                                         excerpt=new_excerpt
                                     )
+                                    status_area.empty()
                                     st.success(f"🎉 記事の上書き更新に成功しました！\n👉 [更新された記事を確認する]({res_url})")
                                 else:
-                                    st.toast("📤 新しい下書き記事として保存中...")
+                                    status_area.info("📤 新しい下書き記事として保存中...")
                                     res_url = post_article_to_wordpress(
                                         wp_url=cur_wp_url,
                                         username=cur_wp_user,
@@ -664,8 +669,10 @@ with tab_improve:
                                         tags=original_post.get("tags"),
                                         status="draft"
                                     )
+                                    status_area.empty()
                                     st.success(f"🎉 改善したリライト記事を『下書き』として保存しました！\n👉 [下書きの編集・プレビュー画面を開く]({res_url})")
                             except Exception as e:
+                                status_area.empty()
                                 st.error(f"❌ リライト処理中にエラーが発生しました: {e}")
                                     
 with tab2:
