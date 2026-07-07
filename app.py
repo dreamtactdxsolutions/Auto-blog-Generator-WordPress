@@ -592,16 +592,13 @@ with tab_improve:
                     
                     st.write("---")
                     st.write("#### 2. 自動改善（リライト）の実行設定")
+                    st.info("💡 元記事の構成やHTML見出しの流れを維持しながら、追加キーワードで検索する読者の疑問に答えるように情報を肉付けします。")
                     
-                    col_rew1, col_rew2 = st.columns(2)
-                    with col_rew1:
-                        rewrite_model = st.selectbox("使用するAIモデル (リライト用)", ["Gemini 3.5 Flash", "Claude Sonnet 4.6"], index=0, key="rew_model")
-                        rew_ai_model = "claude" if "Claude" in rewrite_model else "gemini"
-                        
-                        policy = st.radio("リライトした記事の保存方法", ["新しい下書き記事として別保存（推奨）", "既存の記事に直接上書き更新する"], index=0)
-                        overwrite_wp = True if "直接上書き" in policy else False
-                    with col_rew2:
-                        st.info("💡 元記事の構成やHTML見出しの流れを維持しながら、追加キーワードで検索する読者の疑問に答えるように情報を肉付けします。")
+                    rewrite_model = st.selectbox("使用するAIモデル (リライト用)", ["Gemini 3.5 Flash", "Claude Sonnet 4.6"], index=0, key="rew_model")
+                    rew_ai_model = "claude" if "Claude" in rewrite_model else "gemini"
+                    
+                    policy = st.radio("リライトした記事の保存方法", ["新しい下書き記事として別保存（推奨）", "既存の記事に直接上書き更新する"], index=0)
+                    overwrite_wp = True if "直接上書き" in policy else False
                     
                     # リライト実行
                     if st.button("🚀 自動リライト（改善）を実行する"):
