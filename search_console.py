@@ -28,6 +28,11 @@ def get_search_console_service(service_account_json_val):
             
             if "private_key" in info and isinstance(info["private_key"], str):
                 info["private_key"] = info["private_key"].replace("\r\n", "\n").replace("\r", "\n").replace("\\n", "\n")
+            # PEMデバッグ: Base64ボディの長さを検査
+            _pk = info.get("private_key", "")
+            _lines = _pk.strip().split("\n")
+            _b64_body = "".join(line for line in _lines if not line.startswith("-----"))
+            print(f"[DEBUG dict] private_key全体={len(_pk)}文字, Base64ボディ={len(_b64_body)}文字, 行数={len(_lines)}")
             credentials = service_account.Credentials.from_service_account_info(info)
         # JSON文字列（またはPythonの辞書文字列表記）の場合
         elif isinstance(service_account_json_val, str) and service_account_json_val.strip().startswith("{"):
@@ -41,6 +46,11 @@ def get_search_console_service(service_account_json_val):
                 
             if "private_key" in info and isinstance(info["private_key"], str):
                 info["private_key"] = info["private_key"].replace("\r\n", "\n").replace("\r", "\n").replace("\\n", "\n")
+            # PEMデバッグ: Base64ボディの長さを検査
+            _pk = info.get("private_key", "")
+            _lines = _pk.strip().split("\n")
+            _b64_body = "".join(line for line in _lines if not line.startswith("-----"))
+            print(f"[DEBUG str] private_key全体={len(_pk)}文字, Base64ボディ={len(_b64_body)}文字, 行数={len(_lines)}")
             credentials = service_account.Credentials.from_service_account_info(info)
         # ファイルパスの場合
         else:

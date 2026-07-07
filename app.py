@@ -519,14 +519,17 @@ with tab_improve:
     
     # 接続確認 - st.secretsから直接読み取り、途中の加工処理による文字崩れを完全に防止
     sc_json_raw = None
+    _sc_source = "不明"
     try:
         import streamlit as st_secrets_reader
         if "GOOGLE_SERVICE_ACCOUNT_JSON" in st_secrets_reader.secrets:
             sc_json_raw = st_secrets_reader.secrets["GOOGLE_SERVICE_ACCOUNT_JSON"]
+            _sc_source = "st.secrets直接"
     except Exception:
         pass
     if not sc_json_raw:
         sc_json_raw = config.GOOGLE_SERVICE_ACCOUNT_JSON
+        _sc_source = "config経由"
     
     sc_prop = config.SEARCH_CONSOLE_PROPERTY_URL
     
@@ -554,10 +557,13 @@ with tab_improve:
                 try:
                     data_type = type(sc_json_raw).__name__
                     if isinstance(sc_json_raw, dict) or (not isinstance(sc_json_raw, str) and hasattr(sc_json_raw, "get")):
-                        pk = sc_json_raw.get('private_key', '')
-                        debug_info = f"【{data_type}型・直接読取】 Project: {sc_json_raw.get('project_id')} / KeyID: {sc_json_raw.get('private_key_id')} / 鍵文字数: {len(pk) if pk else 0}"
+                        pk = sc_json_raw.get('private_key', '') or ''
+                        pk_clean = pk.replace("\r\n", "\n").replace("\r", "\n").replace("\\n", "\n")
+                        pk_lines = pk_clean.strip().split("\n")
+                        b64_body = "".join(line for line in pk_lines if not line.startswith("-----"))
+                        debug_info = f"【{data_type}型・{_sc_source}】 Project: {sc_json_raw.get('project_id')} / KeyID: {sc_json_raw.get('private_key_id')} / 鍵文字数: {len(pk)} / Base64ボディ: {len(b64_body)}文字(期待値1624)"
                     elif isinstance(sc_json_raw, str):
-                        debug_info = f"【{data_type}型】 先頭20文字: {repr(sc_json_raw[:20])}"
+                        debug_info = f"【{data_type}型・{_sc_source}】 先頭20文字: {repr(sc_json_raw[:20])} / 全長: {len(sc_json_raw)}文字"
                 except Exception as de:
                     debug_info = f"メタデータ抽出エラー: {de}"
 
