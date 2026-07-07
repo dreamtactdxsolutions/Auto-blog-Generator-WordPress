@@ -1,6 +1,7 @@
 import os
 import random
 import requests
+import re
 from requests.auth import HTTPBasicAuth
 
 def get_random_image_from_folder(folder_path: str) -> str:

@@ -617,26 +617,10 @@ with tab_improve:
                         cur_wp_user = env_values.get("WP_USERNAME", "")
                         cur_wp_pass = env_values.get("WP_PASSWORD", "")
                         
-                        # WordPress接続テストとデバッグ情報の取得
-                        import requests
-                        from requests.auth import HTTPBasicAuth
-                        debug_wp_info = "未解析"
-                        try:
-                            test_url = f"{cur_wp_url.rstrip('/')}/wp-json/wp/v2/posts/{post_id}"
-                            res = requests.get(
-                                test_url,
-                                auth=HTTPBasicAuth(cur_wp_user, cur_wp_pass),
-                                timeout=10
-                            )
-                            masked_pass = cur_wp_pass[:3] + "..." + cur_wp_pass[-3:] if len(cur_wp_pass) > 6 else "***"
-                            debug_wp_info = f"接続先: {test_url} / ユーザー: {cur_wp_user} / パスワード: {masked_pass} (文字数: {len(cur_wp_pass)}) / ステータスコード: {res.status_code} / レスポンス: {res.text[:150]}"
-                        except Exception as we:
-                            debug_wp_info = f"リクエスト失敗: {we}"
-
                         original_post = get_article_content_detailed(cur_wp_url, cur_wp_user, cur_wp_pass, post_id)
                         
                         if not original_post:
-                            st.error(f"❌ エラー: WordPressから記事（ID: {post_id}）を取得できませんでした。ログイン情報やURLを確認してください。\n\n(接続デバッグ情報: {debug_wp_info})")
+                            st.error(f"❌ エラー: WordPressから記事（ID: {post_id}）を取得できませんでした。ログイン情報やURLを確認してください。")
                         else:
                             st.toast("🤖 AIによるリライト記事を生成中...")
                             # 実行用のAPIキー取得
