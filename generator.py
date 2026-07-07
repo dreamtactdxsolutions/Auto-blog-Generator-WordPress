@@ -312,7 +312,11 @@ HTML形式の記事本文
         meta_match = re.search(r'\[META_START\](.*?)\[META_END\]', text, re.DOTALL)
         image_kw_match = re.search(r'\[IMAGE_KEYWORD_START\](.*?)\[IMAGE_KEYWORD_END\]', text, re.DOTALL)
         spots_match = re.search(r'\[SPOTS_START\](.*?)\[SPOTS_END\]', text, re.DOTALL)
+        
         content_match = re.search(r'\[CONTENT_START\](.*?)\[CONTENT_END\]', text, re.DOTALL)
+        # フォールバック: [CONTENT_END] が見つからない場合は [CONTENT_START] から末尾までを取得
+        if not content_match:
+            content_match = re.search(r'\[CONTENT_START\](.*)', text, re.DOTALL)
         
         title = theme if theme else "宮古島最新ガイド"
         ret_keyword = keyword if keyword else "宮古島 観光"
@@ -323,18 +327,26 @@ HTML形式の記事本文
         spots = []
         meta = "宮古島レンタカーのおすすめブログ記事です。"
         image_keyword = "okinawa beach"
-        content = text
         
-        if title_match: title = title_match.group(1).strip()
-        if keyword_match: ret_keyword = keyword_match.group(1).strip()
+        # 本文がうまくパースできない場合も、タグを取り除いた状態のテキストを使用する
+        def clean_tags(txt):
+            if not txt:
+                return ""
+            # [TITLE_START] や [CONTENT_END] などのタグマークをすべて除去
+            return re.sub(r'\[[A-Z0-9_]+_START\]|\[[A-Z0-9_]+_END\]', '', txt).strip()
+
+        content = clean_tags(text)
+        
+        if title_match: title = clean_tags(title_match.group(1))
+        if keyword_match: ret_keyword = clean_tags(keyword_match.group(1))
         if sub_kws_match:
-            raw_sub = sub_kws_match.group(1).strip()
+            raw_sub = clean_tags(sub_kws_match.group(1))
             ret_sub_keywords = [k.strip() for k in raw_sub.replace("、", ",").split(",") if k.strip()]
-        if banner_title_match: banner_title = banner_title_match.group(1).strip()
-        if banner_subtitle_match: banner_subtitle = banner_subtitle_match.group(1).strip()
-        if meta_match: meta = meta_match.group(1).strip()
-        if image_kw_match: image_keyword = image_kw_match.group(1).strip()
-        if content_match: content = content_match.group(1).strip()
+        if banner_title_match: banner_title = clean_tags(banner_title_match.group(1))
+        if banner_subtitle_match: banner_subtitle = clean_tags(banner_subtitle_match.group(1))
+        if meta_match: meta = clean_tags(meta_match.group(1))
+        if image_kw_match: image_keyword = clean_tags(image_kw_match.group(1))
+        if content_match: content = clean_tags(content_match.group(1))
         
         if spots_match:
             for line in spots_match.group(1).strip().split('\n'):
@@ -533,14 +545,22 @@ def rewrite_blog_article(
         title_match = re.search(r'\[TITLE_START\](.*?)\[TITLE_END\]', text, re.DOTALL)
         meta_match = re.search(r'\[META_START\](.*?)\[META_END\]', text, re.DOTALL)
         content_match = re.search(r'\[CONTENT_START\](.*?)\[CONTENT_END\]', text, re.DOTALL)
+        if not content_match:
+            content_match = re.search(r'\[CONTENT_START\](.*)', text, re.DOTALL)
         
+        # タグクリーンアップ関数
+        def clean_tags(txt):
+            if not txt:
+                return ""
+            return re.sub(r'\[[A-Z0-9_]+_START\]|\[[A-Z0-9_]+_END\]', '', txt).strip()
+
         title = original_title
         meta = "宮古島レンタカーのおすすめブログ記事です。"
-        content = text
+        content = clean_tags(text)
         
-        if title_match: title = title_match.group(1).strip()
-        if meta_match: meta = meta_match.group(1).strip()
-        if content_match: content = content_match.group(1).strip()
+        if title_match: title = clean_tags(title_match.group(1))
+        if meta_match: meta = clean_tags(meta_match.group(1))
+        if content_match: content = clean_tags(content_match.group(1))
         
         title = re.sub(r'^#+\s*', '', title)
             
