@@ -116,8 +116,17 @@ def load_env_values():
     except:
         pass
         
-    # 2. ローカルの .env ファイルがあれば上書きします
-    if os.path.exists(env_path):
+    # Streamlit Cloud環境（st.secretsが存在する環境）では、一時ディスク上の.envによる上書きを防ぐため.envロードをスキップします
+    is_streamlit_cloud = False
+    try:
+        import streamlit as st
+        if len(st.secrets.keys()) > 0:
+            is_streamlit_cloud = True
+    except:
+        pass
+        
+    # 2. ローカルの .env ファイルがあれば上書きします（ローカル環境のみ）
+    if not is_streamlit_cloud and os.path.exists(env_path):
         with open(env_path, "r", encoding="utf-8") as f:
             for line in f:
                 line = line.strip()
