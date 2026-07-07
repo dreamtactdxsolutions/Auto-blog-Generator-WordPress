@@ -13,6 +13,8 @@ def get_search_console_service(service_account_json_str: str):
         # JSON文字列かファイルパスかを判定
         if service_account_json_str.strip().startswith("{"):
             info = json.loads(service_account_json_str)
+            if "private_key" in info and isinstance(info["private_key"], str):
+                info["private_key"] = info["private_key"].replace("\\n", "\n")
             credentials = service_account.Credentials.from_service_account_info(info)
         else:
             credentials = service_account.Credentials.from_service_account_file(service_account_json_str)

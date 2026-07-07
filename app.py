@@ -126,7 +126,13 @@ def load_env_values():
                     # JSON文字列のデコード対応 (エスケープされた改行などを戻す)
                     val = v.strip()
                     if val.startswith('"') and val.endswith('"'):
-                        val = val[1:-1].replace('\\"', '"').replace('\\n', '\n')
+                        val = val[1:-1].replace('\\"', '"')
+                        # ダブルクォーテーションで分割し、外側（偶数セグメント）の \\n のみ改行コードにする
+                        parts = val.split('"')
+                        for i in range(len(parts)):
+                            if i % 2 == 0:
+                                parts[i] = parts[i].replace('\\n', '\n')
+                        val = '"'.join(parts)
                     values[k.strip()] = val
     return values
 
