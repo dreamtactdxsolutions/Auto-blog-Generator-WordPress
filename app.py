@@ -755,9 +755,19 @@ with tab3:
         # もし辞書オブジェクト（Secretsからテーブル形式でロードされた場合など）であれば、JSON文字列にシリアライズします
         if isinstance(raw_sa_json, dict) or (not isinstance(raw_sa_json, str) and hasattr(raw_sa_json, "get")):
             import json
-            import copy
             try:
-                raw_sa_json = json.dumps(dict(copy.deepcopy(raw_sa_json)), indent=2, ensure_ascii=False)
+                # Streamlitの循環参照による無限再帰を防ぐため、必要なキーだけを安全にコピーしてシリアライズします
+                info = {}
+                for key_name in [
+                    "type", "project_id", "private_key_id", "private_key", "client_email",
+                    "client_id", "auth_uri", "token_uri", "auth_provider_x509_cert_url",
+                    "client_x509_cert_url", "universe_domain"
+                ]:
+                    if hasattr(raw_sa_json, "get"):
+                        info[key_name] = raw_sa_json.get(key_name)
+                    elif key_name in raw_sa_json:
+                        info[key_name] = raw_sa_json[key_name]
+                raw_sa_json = json.dumps(info, indent=2, ensure_ascii=False)
             except Exception:
                 pass
         service_account_json = st.text_area("Google サービスアカウントキー (JSON)", value=str(raw_sa_json), height=150, help="Search Console APIへのアクセス権限を持つサービスアカウントのJSONキーファイルの中身をそのまま貼り付けてください。")

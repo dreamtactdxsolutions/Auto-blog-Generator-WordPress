@@ -14,8 +14,18 @@ def get_search_console_service(service_account_json_val):
         import copy
         # 辞書オブジェクト（またはdictのように振る舞うAttrDictなど）の場合
         if isinstance(service_account_json_val, dict) or (not isinstance(service_account_json_val, str) and hasattr(service_account_json_val, "get")):
-            # 元のオブジェクトを壊さないよう辞書としてディープコピー
-            info = dict(copy.deepcopy(service_account_json_val))
+            # Streamlitの内部循環参照による無限再帰を防ぐため、必要なキーだけを安全にコピーします
+            info = {}
+            for key_name in [
+                "type", "project_id", "private_key_id", "private_key", "client_email",
+                "client_id", "auth_uri", "token_uri", "auth_provider_x509_cert_url",
+                "client_x509_cert_url", "universe_domain"
+            ]:
+                if hasattr(service_account_json_val, "get"):
+                    info[key_name] = service_account_json_val.get(key_name)
+                elif key_name in service_account_json_val:
+                    info[key_name] = service_account_json_val[key_name]
+            
             if "private_key" in info and isinstance(info["private_key"], str):
                 info["private_key"] = info["private_key"].replace("\\n", "\n")
             credentials = service_account.Credentials.from_service_account_info(info)
