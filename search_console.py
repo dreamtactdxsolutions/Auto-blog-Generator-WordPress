@@ -3,22 +3,31 @@ import re
 from google.oauth2 import service_account
 from googleapiclient.discovery import build
 
-def get_search_console_service(service_account_json_str: str):
+def get_search_console_service(service_account_json_val):
     """
-    サービスアカウントJSON文字列またはファイルパスから認証情報を作成し、Search Consoleサービスオブジェクトを返します。
+    サービスアカウントJSON（辞書、JSON文字列、またはファイルパス）から認証情報を作成し、Search Consoleサービスオブジェクトを返します。
     戻り値: (service, error_message)
     """
-    if not service_account_json_str:
+    if not service_account_json_val:
         return None, "サービスアカウントのJSONキーが空です。"
     try:
-        # JSON文字列かファイルパスかを判定
-        if service_account_json_str.strip().startswith("{"):
-            info = json.loads(service_account_json_str)
+        import copy
+        # 辞書オブジェクト（またはdictのように振る舞うAttrDictなど）の場合
+        if isinstance(service_account_json_val, dict) or (not isinstance(service_account_json_val, str) and hasattr(service_account_json_val, "get")):
+            # 元のオブジェクトを壊さないよう辞書としてディープコピー
+            info = dict(copy.deepcopy(service_account_json_val))
             if "private_key" in info and isinstance(info["private_key"], str):
                 info["private_key"] = info["private_key"].replace("\\n", "\n")
             credentials = service_account.Credentials.from_service_account_info(info)
+        # JSON文字列の場合
+        elif isinstance(service_account_json_val, str) and service_account_json_val.strip().startswith("{"):
+            info = json.loads(service_account_json_val)
+            if "private_key" in info and isinstance(info["private_key"], str):
+                info["private_key"] = info["private_key"].replace("\\n", "\n")
+            credentials = service_account.Credentials.from_service_account_info(info)
+        # ファイルパスの場合
         else:
-            credentials = service_account.Credentials.from_service_account_file(service_account_json_str)
+            credentials = service_account.Credentials.from_service_account_file(str(service_account_json_val))
             
         scoped_credentials = credentials.with_scopes(['https://www.googleapis.com/auth/webmasters.readonly'])
         service = build('webmasters', 'v3', credentials=scoped_credentials)
