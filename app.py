@@ -247,7 +247,7 @@ if menu == "📝 新規記事生成":
         use_maps_photos = st.checkbox("Googleマップからスポットの絶景写真を自動取得し、記事中に挿入する", value=True, help="Places APIを使って観光地の写真を検索し、撮影者へのクレジットと共に記事内に自動配置します。")
         use_unsplash = st.checkbox("アイキャッチ画像をUnsplashから自動取得する（ローカル画像が不足している場合のみ）", value=True, help="imagesフォルダに実写画像が無い場合、自動で海の画像を検索・ダウンロードしてバナーに加工します。")
     with col_opt2:
-        selected_model = st.selectbox("使用するAIモデル", ["Gemini 3.5 Flash", "Claude Sonnet 4.6"], index=0, help="ブログの執筆を行うAIモデルを選択します。Claudeを使用する場合はシステム設定でClaude用のAPIキーを設定してください。")
+        selected_model = st.selectbox("使用するAIモデル", ["Gemini 3.5 Flash", "Claude Sonnet 4.6"], index=1, help="ブログの執筆を行うAIモデルを選択します。Claudeを使用する場合はシステム設定でClaude用のAPIキーを設定してください。")
         ai_model = "claude" if "Claude" in selected_model else "gemini"
         
         if use_csv_mode:
@@ -612,7 +612,7 @@ if menu == "📈 記事改善（Search Console）":
                     st.write("#### 2. 自動改善（リライト）の実行設定")
                     st.info("💡 元記事の構成やHTML見出しの流れを維持しながら、追加キーワードで検索する読者の疑問に答えるように情報を肉付けします。")
                     
-                    rewrite_model = st.selectbox("使用するAIモデル (リライト用)", ["Gemini 3.5 Flash", "Claude Sonnet 4.6"], index=0)
+                    rewrite_model = st.selectbox("使用するAIモデル (リライト用)", ["Gemini 3.5 Flash", "Claude Sonnet 4.6"], index=1)
                     rew_ai_model = "claude" if "Claude" in rewrite_model else "gemini"
                     
                     policy = st.radio("リライトした記事の保存方法", ["新しい下書き記事として別保存（推奨）", "既存の記事に直接上書き更新する"], index=0)
