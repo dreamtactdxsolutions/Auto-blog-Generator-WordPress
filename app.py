@@ -257,6 +257,14 @@ if menu == "📝 新規記事生成":
             post_status = st.selectbox("WordPressへの公開ステータス", ["下書き (draft) - 推奨", "公開 (publish)"], index=0, help="まずは下書きで登録し、確認したのちに公開するのが安全です。")
             wp_status = "draft" if "下書き" in post_status else "publish"
         
+    # 追加プロンプト入力エリア（アコーディオン）
+    with st.expander("💡 AIへの追加の執筆指示・プロンプト（任意）"):
+        custom_instruction = st.text_area(
+            "追加の指示・条件（今回のみ適用するルール）",
+            placeholder="例：\n・現地の安い飲食店情報を多めに盛り込んでください\n・文体を『〜だよ』『〜ね』などの親しみやすいものにしてください\n・レンタカーでの移動時の注意点（駐車場の有無など）をより詳しく解説してください",
+            help="AIに今回の記事作成において追加で与えたいルールやプロンプトを自由に入力できます。"
+        )
+        
     st.markdown("<br>", unsafe_allow_html=True)
     
     # 実行ボタンの表示切替
@@ -369,6 +377,7 @@ if menu == "📝 新規記事生成":
                         existing_titles=existing_titles,
                         use_trend_research=use_trend_research,
                         trend_genre=trend_genre,
+                        custom_instruction=custom_instruction,
                         ai_model=ai_model
                     )
                     
@@ -609,6 +618,14 @@ if menu == "📈 記事改善（Search Console）":
                     policy = st.radio("リライトした記事の保存方法", ["新しい下書き記事として別保存（推奨）", "既存の記事に直接上書き更新する"], index=0)
                     overwrite_wp = True if "直接上書き" in policy else False
                     
+                    # 追加リライトプロンプト入力エリア（アコーディオン）
+                    with st.expander("💡 AIへの追加のリライト指示・プロンプト（任意）"):
+                        custom_rewrite_instruction = st.text_area(
+                            "追加のリライト指示・条件（今回のみ適用するルール）",
+                            placeholder="例：\n・見出し3の前に、新しい観光スポットの段落を追加してください\n・元記事の〜という文言は不適切なので削除または修正してください\n・狙うキーワードを必ずh3見出しの中にも含めるようにリライトしてください",
+                            help="AIに今回のリライト作成において追加で与えたいルールやプロンプトを自由に入力できます。"
+                        )
+                    
                     # リライト実行
                     if st.button("🚀 自動リライト（改善）を実行する"):
                         # WordPress 投稿ID of url
@@ -645,6 +662,7 @@ if menu == "📈 記事改善（Search Console）":
                                         original_title=original_post["title"],
                                         original_content=original_post["content"],
                                         low_performing_queries=target_info["queries"],
+                                        custom_instruction=custom_rewrite_instruction,
                                         ai_model=rew_ai_model
                                     )
                                     

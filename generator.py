@@ -13,6 +13,7 @@ def generate_blog_article(
     existing_titles: list = None,
     use_trend_research: bool = False,
     trend_genre: str = "すべて",
+    custom_instruction: str = None,
     ai_model: str = "gemini"
 ) -> dict:
     client = None
@@ -271,6 +272,9 @@ Google検索結果を要約しただけの記事は禁止します。
 HTML形式の記事本文
 [CONTENT_END]
 """
+    
+    if custom_instruction and custom_instruction.strip():
+        prompt += f"\n\n【ユーザーによる今回の追加の執筆指示（最優先ルール）】\n{custom_instruction.strip()}\n"
 
     print(f"🤖 {ai_model.upper()}を使用して記事を生成中... (モード: {'トレンドリサーチ' if use_trend_research else 'テーマ指定'})")
     
@@ -470,6 +474,7 @@ def rewrite_blog_article(
     original_title: str,
     original_content: str,
     low_performing_queries: list,
+    custom_instruction: str = None,
     ai_model: str = "gemini"
 ) -> dict:
     """
@@ -524,6 +529,9 @@ def rewrite_blog_article(
 リライト後のHTML形式の記事本文全体
 [CONTENT_END]
 """
+    
+    if custom_instruction and custom_instruction.strip():
+        prompt += f"\n\n【ユーザーによる今回の追加のリライト指示（最優先ルール）】\n{custom_instruction.strip()}\n"
 
     print(f"🤖 {ai_model.upper()}を使用して記事をリライト（自動改善）中... (対象記事: {original_title})")
     
