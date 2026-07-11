@@ -309,7 +309,7 @@ def get_existing_posts_detailed(wp_url: str, username: str, app_password: str) -
     """
     url = f"{wp_url.rstrip('/')}/wp-json/wp/v2/posts"
     params = {
-        'status': 'publish',
+        'status': 'publish,draft',
         'per_page': 100,
         '_embed': 'true',  # メディア情報を埋め込む
     }
