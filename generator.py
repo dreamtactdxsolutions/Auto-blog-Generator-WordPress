@@ -5,6 +5,62 @@ from google.genai import types
 from anthropic import Anthropic
 import config
 
+PROMPTS_DIR = os.path.join(os.path.dirname(__file__), "prompts")
+
+DEFAULT_SYSTEM_PROMPT_GENERATE = """あなたは宮古島のレンタカー会社「宮古島レンタカー」のブログ編集部（現地スタッフ）です。
+提供されたフォーマットと厳格なルールに従って、日本語でブログ記事を出力してください。
+
+【執筆ボリュームに関する重要指示】
+各見出し（h2, h3など）の本文は、単なる概要にとどめず、現地の詳しい状況、レンタカーでの所要時間、注意点、プロのアドバイスを含め、段落ごとに最低でも300〜500文字程度のしっかりとしたボリュームで具体的に肉付けして書き下してください。
+
+【トークン切れ（途切れ）防止のための構成ルール（最重要・厳守）】
+APIの最大出力トークン制限を強く意識してください。最後の「まとめ」の見出しと [CONTENT_END] タグまで絶対に途切れることなく綺麗に完結させて出力するため、以下の構成バランスを厳守すること：
+1. 記事全体の見出しの数は、大見出し（h2）は最大3〜4個、各h2の中の中見出し（h3）は最大2個程度に抑えてください。見出しの数が多すぎると途中で切れる原因になります。
+2. 各見出しの文章量をしっかり確保しつつ、全体の総文字数が3,500文字前後に収まるように配分し、必ず最後まで書き切ってください。"""
+
+DEFAULT_SYSTEM_PROMPT_REWRITE = """あなたは宮古島のレンタカー会社「宮古島レンタカー」のブログ編集部（現地スタッフ）です。
+提供されたフォーマットとルールに従って、日本語でリライト後のブログ記事を出力してください。
+
+【執筆ボリュームに関する重要指示】
+各見出し（h2, h3など）の本文は、段落ごとに最低でも300〜500文字程度の具体的で読み応えのある情報で肉付けし、読者が他のページを検索し直さなくても済むように徹底的に掘り下げて執筆してください。
+
+【トークン切れ（途切れ）防止のための構成ルール（最重要・厳守）】
+APIの最大出力トークン制限を強く意識してください。最後の「まとめ」の見出しと [CONTENT_END] タグまで絶対に途切れることなく綺麗に完結させて出力するため、以下の構成バランスを厳守すること：
+1. 記事全体の見出しの数は、大見出し（h2）は最大3〜4個、各h2の中の中見出し（h3）は最大2個程度に抑えてください。見出しの数が多すぎると途中で切れる原因になります。
+2. 各見出しの文章量をしっかり確保しつつ、全体の総文字数が3,500文字前後に収まるように配分し、必ず最後まで書き切ってください。"""
+
+def get_system_prompt_generate() -> str:
+    os.makedirs(PROMPTS_DIR, exist_ok=True)
+    path = os.path.join(PROMPTS_DIR, "system_prompt_generate.txt")
+    if not os.path.exists(path):
+        with open(path, "w", encoding="utf-8") as f:
+            f.write(DEFAULT_SYSTEM_PROMPT_GENERATE.strip())
+        return DEFAULT_SYSTEM_PROMPT_GENERATE.strip()
+    with open(path, "r", encoding="utf-8") as f:
+        return f.read().strip()
+
+def get_system_prompt_rewrite() -> str:
+    os.makedirs(PROMPTS_DIR, exist_ok=True)
+    path = os.path.join(PROMPTS_DIR, "system_prompt_rewrite.txt")
+    if not os.path.exists(path):
+        with open(path, "w", encoding="utf-8") as f:
+            f.write(DEFAULT_SYSTEM_PROMPT_REWRITE.strip())
+        return DEFAULT_SYSTEM_PROMPT_REWRITE.strip()
+    with open(path, "r", encoding="utf-8") as f:
+        return f.read().strip()
+
+def save_system_prompt_generate(text: str):
+    os.makedirs(PROMPTS_DIR, exist_ok=True)
+    path = os.path.join(PROMPTS_DIR, "system_prompt_generate.txt")
+    with open(path, "w", encoding="utf-8") as f:
+        f.write(text.strip())
+
+def save_system_prompt_rewrite(text: str):
+    os.makedirs(PROMPTS_DIR, exist_ok=True)
+    path = os.path.join(PROMPTS_DIR, "system_prompt_rewrite.txt")
+    with open(path, "w", encoding="utf-8") as f:
+        f.write(text.strip())
+
 def generate_blog_article(
     api_key: str, 
     keyword: str = None, 
@@ -291,6 +347,7 @@ HTML形式の記事本文
                 model='gemini-3.5-flash',
                 contents=prompt,
                 config=types.GenerateContentConfig(
+                    system_instruction=get_system_prompt_generate(),
                     temperature=0.6,
                     tools=[{"google_search": {}}],
                 ),
@@ -300,22 +357,11 @@ HTML形式の記事本文
             print("✍️ Claude Sonnet 4.6 を使用して執筆中...")
             claude_client = Anthropic(api_key=api_key)
             
-            system_prompt = """あなたは宮古島のレンタカー会社「宮古島レンタカー」のブログ編集部（現地スタッフ）です。
-提供されたフォーマットと厳格なルールに従って、日本語でブログ記事を出力してください。
-
-【執筆ボリュームに関する重要指示】
-各見出し（h2, h3など）の本文は、単なる概要にとどめず、現地の詳しい状況、レンタカーでの所要時間、注意点、プロのアドバイスを含め、段落ごとに最低でも300〜500文字程度のしっかりとしたボリュームで具体的に肉付けして書き下してください。
-
-【トークン切れ（途切れ）防止のための構成ルール（最重要・厳守）】
-APIの最大出力トークン制限を強く意識してください。最後の「まとめ」の見出しと [CONTENT_END] タグまで絶対に途切れることなく綺麗に完結させて出力するため、以下の構成バランスを厳守すること：
-1. 記事全体の見出しの数は、大見出し（h2）は最大3〜4個、各h2の中の中見出し（h3）は最大2個程度に抑えてください。見出しの数が多すぎると途中で切れる原因になります。
-2. 各見出しの文章量をしっかり確保しつつ、全体の総文字数が3,500文字前後に収まるように配分し、必ず最後まで書き切ってください。"""
-
             response = claude_client.messages.create(
                 model="claude-sonnet-4-6",
                 max_tokens=8000,
                 temperature=0.6,
-                system=system_prompt,
+                system=get_system_prompt_generate(),
                 messages=[
                     {"role": "user", "content": prompt}
                 ]
@@ -550,27 +596,20 @@ def rewrite_blog_article(
             response = client.models.generate_content(
                 model='gemini-3.5-flash',
                 contents=prompt,
+                config=types.GenerateContentConfig(
+                    system_instruction=get_system_prompt_rewrite(),
+                    temperature=0.6
+                ),
             )
             text = response.text
         elif ai_model.lower() == "claude":
             claude_client = Anthropic(api_key=api_key)
             
-            system_prompt = """あなたは宮古島のレンタカー会社「宮古島レンタカー」のブログ編集部（現地スタッフ）です。
-提供されたフォーマットとルールに従って、日本語でリライト後のブログ記事を出力してください。
-
-【執筆ボリュームに関する重要指示】
-各見出し（h2, h3など）の本文は、段落ごとに最低でも300〜500文字程度の具体的で読み応えのある情報で肉付けし、読者が他のページを検索し直さなくても済むように徹底的に掘り下げて執筆してください。
-
-【トークン切れ（途切れ）防止のための構成ルール（最重要・厳守）】
-APIの最大出力トークン制限を強く意識してください。最後の「まとめ」の見出しと [CONTENT_END] タグまで絶対に途切れることなく綺麗に完結させて出力するため、以下の構成バランスを厳守すること：
-1. 記事全体の見出しの数は、大見出し（h2）は最大3〜4個、各h2の中の中見出し（h3）は最大2個程度に抑えてください。見出しの数が多すぎると途中で切れる原因になります。
-2. 各見出しの文章量をしっかり確保しつつ、全体の総文字数が3,500文字前後に収まるように配分し、必ず最後まで書き切ってください。"""
-
             response = claude_client.messages.create(
                 model="claude-sonnet-4-6",
                 max_tokens=8000,
                 temperature=0.6,
-                system=system_prompt,
+                system=get_system_prompt_rewrite(),
                 messages=[
                     {"role": "user", "content": prompt}
                 ]

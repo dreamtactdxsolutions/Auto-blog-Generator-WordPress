@@ -5,7 +5,15 @@ from PIL import Image
 
 # プロジェクト内の設定・生成モジュールをインポート
 import config
-from generator import generate_blog_article
+from generator import (
+    generate_blog_article,
+    get_system_prompt_generate,
+    get_system_prompt_rewrite,
+    save_system_prompt_generate,
+    save_system_prompt_rewrite,
+    DEFAULT_SYSTEM_PROMPT_GENERATE,
+    DEFAULT_SYSTEM_PROMPT_REWRITE
+)
 from image_fetcher import download_image_from_unsplash
 from image_processor import create_title_banner
 from wordpress import (
@@ -840,6 +848,47 @@ if menu == "⚙️ システム設定":
         config.ANTHROPIC_API_KEY = anthropic_key
         config.GOOGLE_SERVICE_ACCOUNT_JSON = service_account_json
         config.SEARCH_CONSOLE_PROPERTY_URL = search_console_property
+
+    # AIプロンプトのカスタマイズセクション
+    st.write("---")
+    st.markdown("### 🤖 AIシステムプロンプト（指示書）のカスタマイズ")
+    st.info(
+        "💡 ここではAIがブログ記事を執筆・リライトする際の大前提ルール（文字数、トーン、見出しの構成など）を直接編集できます。\n\n"
+        "※プログラム上で置換する複雑な変数（{theme}など）は含まれていないプレーンな指示書のため、**お客様が文章を編集してもアプリが壊れる（クラッシュする）心配は一切ありません。** 安心して独自の執筆ルールを追加・調整してください。"
+    )
+    
+    current_prompt_gen = get_system_prompt_generate()
+    current_prompt_rew = get_system_prompt_rewrite()
+    
+    # ２つのプロンプト編集テキストエリア
+    edit_prompt_gen = st.text_area(
+        "📝 新規記事生成用のAIシステム指示書 (system_prompt)",
+        value=current_prompt_gen,
+        height=300,
+        help="新規記事の自動生成時にAI（Gemini/Claude）へ与える全体ルールです。"
+    )
+    
+    edit_prompt_rew = st.text_area(
+        "📈 記事改善（リライト）用のAIシステム指示書 (system_prompt)",
+        value=current_prompt_rew,
+        height=300,
+        help="Search Consoleから流入クエリを基にリライトする際にAIへ与える全体ルールです。"
+    )
+    
+    col_p_btn1, col_p_btn2 = st.columns([1, 1])
+    with col_p_btn1:
+        if st.button("💾 プロンプト設定を保存する"):
+            save_system_prompt_generate(edit_prompt_gen)
+            save_system_prompt_rewrite(edit_prompt_rew)
+            st.success("✅ プロンプト設定を保存しました！次回生成時より反映されます。")
+            st.rerun()
+            
+    with col_p_btn2:
+        if st.button("🔄 プロンプトを初期状態に戻す"):
+            save_system_prompt_generate(DEFAULT_SYSTEM_PROMPT_GENERATE)
+            save_system_prompt_rewrite(DEFAULT_SYSTEM_PROMPT_REWRITE)
+            st.success("✅ プロンプトを初期の推奨設定に戻しました。")
+            st.rerun()
 
 if menu == "📖 取扱説明書":
     st.markdown("### 📖 取扱説明書・設定ガイド")
